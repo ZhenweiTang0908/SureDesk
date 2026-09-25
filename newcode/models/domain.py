@@ -274,6 +274,8 @@ class ProblemPool(Base, TimestampMixin):
         nullable=False,
     )  # PENDING, ACCEPTED, IGNORED
     standard_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    frequency: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    sessions: Mapped[list[str] | None] = mapped_column(JSON, default=list, nullable=True)
 
 
 class AuditLog(Base):

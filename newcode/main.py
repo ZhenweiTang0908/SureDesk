@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from newcode.api.routes.stream import router as stream_router
+from newcode.api.routes.feedback import router as feedback_router
 from newcode.core.config import settings
 from newcode.core.database import init_db
 
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(stream_router)
+    application.include_router(feedback_router)
 
     @application.get("/health", tags=["system"])
     @application.get("/api/health", tags=["system"])
@@ -59,3 +61,4 @@ def create_app() -> FastAPI:
 
 
 app: FastAPI = create_app()
+
