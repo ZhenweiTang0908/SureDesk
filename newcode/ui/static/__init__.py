@@ -1,0 +1,1 @@
+"""newcode/ui/static package."""
