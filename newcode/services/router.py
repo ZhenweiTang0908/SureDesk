@@ -8,21 +8,22 @@ from typing import Any
 from newcode.schemas.intent import IntentType, RouteTarget, RewriteAndRouteResult
 
 
-# Rule-based intent keyword mapping
 INTENT_KEYWORDS: dict[IntentType, list[str]] = {
     IntentType.SENSITIVE_VIOLATION: ["色情", "暴力", "炸弹", "违法", "赌博", "枪支", "毒品", "政治敏感"],
     IntentType.COMPLAINT_HUMAN: ["人工", "转人工", "投诉", "我要找人", "叫客服经理", "差评曝光", "态度太差", "315", "消协"],
-    IntentType.REFUND_REQUEST: ["退款", "退货", "换货", "退钱", "不要了", "申请退款", "退回商品"],
+    IntentType.PRE_SALE_RULES: [
+        "7天无理由", "七天无理由", "退换规则", "退换政策", "保修", "质保", "保价", "价格保护",
+        "优惠券", "发票", "包邮", "满减", "专享券", "政策要求", "要求是什么", "怎么退货", "退货规则"
+    ],
+    IntentType.REFUND_REQUEST: ["申请退款", "我要退", "我要退款", "我要退货", "退钱", "不要了", "申请退货", "退回商品", "退款 ord_"],
     IntentType.LOGISTICS_PROGRESS: ["物流", "快递", "发货了吗", "查件", "运单号", "到哪了", "顺丰", "催单", "还没发货", "发货", "配送"],
     IntentType.ORDER_QUERY: ["查订单", "我的订单", "订单状态", "订单号", "买了什么", "买过什么", "查看购买记录", "订单记录"],
-    IntentType.PRE_SALE_RULES: ["保价", "价格保护", "优惠券", "发票", "支持7天", "七天无理由", "包邮", "满减", "专享券", "保修", "质保"],
     IntentType.PRODUCT_CONSULTATION: ["参数", "配置", "尺寸", "颜色", "功能", "规格", "好用吗", "材质", "重量", "续航"],
     IntentType.CHITCHAT: ["你好", "在吗", "早上好", "晚上好", "谢谢", "再见", "你是谁", "讲个笑话", "哈哈"],
 }
 
 
 def map_intent_to_route(intent: IntentType, missing_slots: list[str]) -> RouteTarget:
-    """Deterministic mapping from 9 intents to 5 route targets."""
     if missing_slots:
         return RouteTarget.CLARIFY_PROMPT
 
@@ -34,15 +35,11 @@ def map_intent_to_route(intent: IntentType, missing_slots: list[str]) -> RouteTa
         return RouteTarget.CLARIFY_PROMPT
     elif intent == IntentType.REFUND_REQUEST:
         return RouteTarget.DETERMINISTIC_WORKFLOW
-    else:  # PRODUCT_CONSULTATION, PRE_SALE_RULES, ORDER_QUERY, LOGISTICS_PROGRESS
+    else:
         return RouteTarget.MAIN_AGENT_RAG
 
 
 class ContextQueryRewriterAndRouter:
-    """
-    Combines context resolution, pronoun restoration, intent classification, and route mapping.
-    """
-
     def __init__(self, llm_client=None):
         self.llm_client = llm_client
 
@@ -54,7 +51,7 @@ class ContextQueryRewriterAndRouter:
         query_strip = query.strip()
         history = history or []
 
-        # 1. Check for sensitive violation first
+        # 1. Sensitive violation
         for kw in INTENT_KEYWORDS[IntentType.SENSITIVE_VIOLATION]:
             if kw in query_strip:
                 return RewriteAndRouteResult(
@@ -70,7 +67,6 @@ class ContextQueryRewriterAndRouter:
         rewritten = query_strip
         last_subject = ""
 
-        # Extract last mentioned product or entity from history
         for msg in reversed(history):
             content = msg.get("content", "")
             match = re.search(r"([A-Za-z0-9\u4e00-\u9fff]{2,15}(?:耳机|手机|电脑|相机|手表|鞋|衣服|包|商品|订单[A-Za-z0-9_]*))", content)
@@ -78,7 +74,6 @@ class ContextQueryRewriterAndRouter:
                 last_subject = match.group(1)
                 break
 
-        # Disambiguate pronouns: 它, 这个, 那件, 该商品, etc.
         pronouns = ["它", "这个", "那件", "该商品", "这款", "那", "它的"]
         for p in pronouns:
             if p in query_strip and last_subject:
@@ -87,10 +82,9 @@ class ContextQueryRewriterAndRouter:
                     rewritten = query_strip.replace(p, last_subject)
                 break
 
-        # If query is short half-sentence
         if len(query_strip) <= 6 and last_subject and last_subject not in query_strip:
             if "退" in query_strip:
-                rewritten = f"{last_subject}支持退款退货吗？"
+                rewritten = f"{last_subject}申请退货"
             elif "保修" in query_strip:
                 rewritten = f"{last_subject}保修多久？"
             elif "发货" in query_strip:
@@ -105,19 +99,22 @@ class ContextQueryRewriterAndRouter:
                 detected_intent = IntentType.COMPLAINT_HUMAN
                 break
 
-        # Check refund
-        if detected_intent is None:
-            for kw in INTENT_KEYWORDS[IntentType.REFUND_REQUEST]:
-                if kw in query_strip or kw in rewritten:
-                    detected_intent = IntentType.REFUND_REQUEST
-                    break
-
-        # Check pre-sale rules
+        # Check pre-sale rules first if it asks for policy / requirements
         if detected_intent is None:
             for kw in INTENT_KEYWORDS[IntentType.PRE_SALE_RULES]:
                 if kw in query_strip or kw in rewritten:
                     detected_intent = IntentType.PRE_SALE_RULES
                     break
+
+        # Check actionable refund
+        if detected_intent is None:
+            # Also catch if "退款" or "退货" appears in query
+            for kw in INTENT_KEYWORDS[IntentType.REFUND_REQUEST]:
+                if kw in query_strip or kw in rewritten:
+                    detected_intent = IntentType.REFUND_REQUEST
+                    break
+            if detected_intent is None and ("退款" in query_strip or "退货" in query_strip or "退款" in rewritten or "退货" in rewritten):
+                detected_intent = IntentType.REFUND_REQUEST
 
         # Check logistics
         if detected_intent is None:
