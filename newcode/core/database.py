@@ -56,3 +56,5 @@ async def drop_db(custom_engine: AsyncEngine | None = None) -> None:
     target_engine = custom_engine or engine
     async with target_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+AsyncSessionLocal = async_session_factory
