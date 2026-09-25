@@ -1,0 +1,125 @@
+{
+  "corpus_file": "knowledge_base/ecommerce_faq.md",
+  "queries": [
+    {
+      "id": "q1",
+      "query": "7天无理由退货运费由谁承担？",
+      "expected_title": "7天无理由退货",
+      "category": "售后退换"
+    },
+    {
+      "id": "q2",
+      "query": "微信支付退款多久到账？",
+      "expected_title": "退款到账时效",
+      "category": "退款到账"
+    },
+    {
+      "id": "q3",
+      "query": "支付宝退款是实时到账吗？",
+      "expected_title": "退款到账时效",
+      "category": "退款到账"
+    },
+    {
+      "id": "q4",
+      "query": "银行卡退款几天能到？",
+      "expected_title": "退款到账时效",
+      "category": "退款到账"
+    },
+    {
+      "id": "q5",
+      "query": "商品下单后最迟什么时候发货？",
+      "expected_title": "发货承诺时效",
+      "category": "物流配送"
+    },
+    {
+      "id": "q6",
+      "query": "大促期间几天发货？",
+      "expected_title": "发货承诺时效",
+      "category": "物流配送"
+    },
+    {
+      "id": "q7",
+      "query": "顺丰次日达覆盖哪些区域？",
+      "expected_title": "发货承诺时效",
+      "category": "物流配送"
+    },
+    {
+      "id": "q8",
+      "query": "物流超过48小时不更新怎么办？",
+      "expected_title": "物流轨迹异常",
+      "category": "物流配送"
+    },
+    {
+      "id": "q9",
+      "query": "商品有质量问题退货谁付运费？",
+      "expected_title": "7天无理由退货",
+      "category": "售后退换"
+    },
+    {
+      "id": "q10",
+      "query": "生鲜食品支持无理由退货吗？",
+      "expected_title": "特殊类目退换限制",
+      "category": "特殊类目"
+    },
+    {
+      "id": "q11",
+      "query": "定制类商品是否可以无理由退换？",
+      "expected_title": "特殊类目退换限制",
+      "category": "特殊类目"
+    },
+    {
+      "id": "q12",
+      "query": "退货时赠品需要一起退回吗？",
+      "expected_title": "赠品退回规则",
+      "category": "售后退换"
+    },
+    {
+      "id": "q13",
+      "query": "发票怎么开具，开增值税专用发票需要哪些资料？",
+      "expected_title": "发票开具与索取",
+      "category": "财务发票"
+    },
+    {
+      "id": "q14",
+      "query": "优惠券可以叠加跨店满减吗？",
+      "expected_title": "优惠券使用规则",
+      "category": "营销活动"
+    },
+    {
+      "id": "q15",
+      "query": "新人专享券有效期有多久？",
+      "expected_title": "优惠券使用规则",
+      "category": "营销活动"
+    },
+    {
+      "id": "q16",
+      "query": "保价政策支持多久以内的降价补偿？",
+      "expected_title": "价格保护政策",
+      "category": "售前规则"
+    },
+    {
+      "id": "q17",
+      "query": "购买家电后发现降价了怎么申请退差价？",
+      "expected_title": "价格保护政策",
+      "category": "售前规则"
+    },
+    {
+      "id": "q18",
+      "query": "收到的包裹破损外包装变形如何拒签？",
+      "expected_title": "包裹签收与破损处理",
+      "category": "物流配送"
+    },
+    {
+      "id": "q19",
+      "query": "退货寄件可以使用顺丰到付吗？",
+      "expected_title": "退货寄回规范",
+      "category": "售后退换"
+    },
+    {
+      "id": "q20",
+      "query": "客服人工服务时间是几点到几点？",
+      "expected_title": "服务时间与人工通道",
+      "category": "服务支持"
+    }
+  ]
+}
