@@ -312,4 +312,4 @@ async def test_health_check_endpoint():
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert "NewCode" in data["app"]
+        assert "SureDesk" in data["app"]

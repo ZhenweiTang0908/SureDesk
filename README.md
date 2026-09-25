@@ -1,8 +1,8 @@
-# NewCode - Production-Grade E-Commerce AI Customer Service System
+# SureDesk - Production-Grade E-Commerce AI Customer Service System
 
 > English | [简体中文](#newcode---生产级电商-ai-智能客服系统)
 
-NewCode is a production-grade, enterprise-ready E-Commerce AI Customer Service system designed with deterministic workflow constraints, zero-trust IDOR access control, high-precision hybrid retrieval (RAG), pre-generation confidence gating, dual-layer conversation memory, and an automated data flywheel loop.
+SureDesk is a production-grade, enterprise-ready E-Commerce AI Customer Service system designed with deterministic workflow constraints, zero-trust IDOR access control, high-precision hybrid retrieval (RAG), pre-generation confidence gating, dual-layer conversation memory, and an automated data flywheel loop.
 
 ---
 
@@ -101,7 +101,7 @@ stateDiagram-v2
 ## Project Structure
 
 ```text
-NewCode/
+SureDesk/
 ├── newcode/
 │   ├── api/
 │   │   └── routes/
@@ -258,9 +258,9 @@ Run the complete test suite (57 tests covering all requirements R1-R12):
 ---
 ---
 
-# NewCode - 生产级电商 AI 智能客服系统
+# SureDesk (定策) - 生产级电商 AI 智能客服系统
 
-NewCode 是一个具备业务确定性约束、零信任越权防御（IDOR）、高准确率混合检索（RAG）、前置置信度闸门拦截、双层会话记忆与数据自迭代闭环的生产级电商 AI 智能客服系统。
+SureDesk（定策）是一个具备业务确定性约束、零信任越权防御（IDOR）、高准确率混合检索（RAG）、前置置信度闸门拦截、双层会话记忆与数据自迭代闭环的生产级电商 AI 智能客服系统。
 
 ---
 

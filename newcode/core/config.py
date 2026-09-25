@@ -25,13 +25,13 @@ class Settings(BaseSettings):
 
     # Database Settings
     DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///newcode.db",
+        default="sqlite+aiosqlite:///suredesk.db",
         description="SQLAlchemy async database connection string",
     )
 
     # Application Settings
     APP_NAME: str = Field(
-        default="NewCode",
+        default="SureDesk",
         description="Application name",
     )
     APP_VERSION: str = Field(
@@ -66,3 +66,4 @@ def get_settings() -> Settings:
 
 
 settings: Settings = get_settings()
+
