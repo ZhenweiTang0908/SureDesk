@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>MewHelp - 运营审核工作台</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 24px; }
+    .container { max-width: 1100px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #1f1f1f; display: flex; justify-content: space-between; align-items: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+    th, td { border: 1px solid #f0f0f0; padding: 12px 14px; text-align: left; }
+    th { background: #fafafa; font-weight: 600; color: #595959; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+    .badge-gate { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
+    .badge-thumb { background: #fffbe6; color: #d48806; border: 1px solid #ffe58f; }
+    .btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .btn-primary { background: #1890ff; color: #fff; }
+    .btn-default { background: #f5f5f5; color: #595959; border: 1px solid #d9d9d9; margin-left: 6px; }
+    textarea { width: 100%; box-sizing: border-box; border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>
+      <span>低置信度与负反馈问题池 (Data Flywheel)</span>
+      <button class="btn btn-default" onclick="loadProblems()">🔄 刷新列表</button>
+    </h2>
+    <table id="problemTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>触发原因</th>
+          <th>提问内容</th>
+          <th>频次</th>
+          <th>标准答案补全与采纳</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="6" style="text-align:center;color:#8c8c8c;">正在加载中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    async function loadProblems() {
+      const res = await fetch("/api/workbench/problems?status=PENDING");
+      const data = await res.json();
+      const tbody = document.getElementById("tbody");
+      if (!data.problems || data.problems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#52c41a;padding:24px;">🎉 当前暂无待审核问题，知识库运行良好！</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.problems.map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td><span class="badge ${p.trigger_type==='CONFIDENCE_GATE'?'badge-gate':'badge-thumb'}">${p.trigger_type}</span></td>
+          <td><b>${p.query}</b><br><small style="color:#8c8c8c;">改写: ${p.rewritten_query}</small></td>
+          <td><span style="font-weight:bold;color:#1890ff;">${p.frequency}</span></td>
+          <td><textarea id="ans_${p.id}" rows="2" placeholder="在此输入官方标准解答..."></textarea></td>
+          <td>
+            <button class="btn btn-primary" onclick="adoptProblem('${p.id}')">采纳并入库</button>
+            <button class="btn btn-default" onclick="ignoreProblem('${p.id}')">忽略</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function adoptProblem(id) {
+      const answer = document.getElementById("ans_" + id).value.trim();
+      if (!answer) {
+        alert("请输入标准答案后再提交采纳！");
+        return;
+      }
+      await fetch("/api/workbench/adopt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problem_id: id, standard_answer: answer })
+      });
+      alert("✅ 已成功采纳，并同步更新写入知识库与向量引擎！");
+      loadProblems();
+    }
+
+    async function ignoreProblem(id) {
+      await fetch("/api/workbench/ignore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problem_id: id })
+      });
+      loadProblems();
+    }
+
+    loadProblems();
+  </script>
+</body>
+</html>
+

@@ -2,12 +2,16 @@
 
 from contextlib import asynccontextmanager
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 
 from newcode.api.routes.stream import router as stream_router
 from newcode.api.routes.feedback import router as feedback_router
+from newcode.api.routes.workbench import router as workbench_router
 from newcode.core.config import settings
 from newcode.core.database import init_db
 
@@ -47,6 +51,19 @@ def create_app() -> FastAPI:
 
     application.include_router(stream_router)
     application.include_router(feedback_router)
+    application.include_router(workbench_router)
+
+    static_dir = Path(__file__).resolve().parent / "ui" / "static"
+    if static_dir.exists():
+        application.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+        @application.get("/chat", include_in_schema=False)
+        async def chat_page():
+            return RedirectResponse(url="/static/chat.html")
+
+        @application.get("/workbench", include_in_schema=False)
+        async def workbench_page():
+            return RedirectResponse(url="/static/workbench.html")
 
     @application.get("/health", tags=["system"])
     @application.get("/api/health", tags=["system"])

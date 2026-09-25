@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>MewHelp - 电商智能客服</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
+    .chat-container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; height: 90vh; }
+    .header { background: #1890ff; color: #fff; padding: 16px 24px; font-size: 18px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .header a { color: #fff; font-size: 14px; text-decoration: underline; }
+    .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .msg { max-width: 75%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; font-size: 14px; word-break: break-word; }
+    .msg.user { align-self: flex-end; background: #1890ff; color: #fff; }
+    .msg.bot { align-self: flex-start; background: #f0f2f5; color: #333; border: 1px solid #e8e8e8; }
+    .thought { background: #fafafa; border-left: 3px solid #faad14; padding: 6px 10px; margin-bottom: 8px; font-size: 12px; color: #8c8c8c; border-radius: 4px; }
+    .citation { margin-top: 8px; font-size: 12px; color: #1890ff; background: #e6f7ff; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+    .feedback-bar { margin-top: 8px; display: flex; gap: 8px; font-size: 12px; }
+    .feedback-btn { border: 1px solid #d9d9d9; background: #fff; cursor: pointer; border-radius: 4px; padding: 2px 8px; }
+    .feedback-btn:hover { background: #fafafa; }
+    .input-box { display: flex; padding: 16px; border-top: 1px solid #e8e8e8; background: #fff; }
+    .input-box input { flex: 1; border: 1px solid #d9d9d9; border-radius: 6px; padding: 10px 14px; font-size: 14px; outline: none; }
+    .input-box button { margin-left: 10px; background: #1890ff; color: #fff; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">
+      <span>MewHelp 电商 AI 智能客服</span>
+      <a href="/workbench.html" target="_blank">运营审核工作台</a>
+    </div>
+    <div class="messages" id="messages">
+      <div class="msg bot">您好！我是 MewHelp 智能客服，支持订单查询、物流跟踪、7天退换货及售前政策咨询。请问有什么可以帮您？</div>
+    </div>
+    <div class="input-box">
+      <input type="text" id="userInput" placeholder="输入您的问题，如：我的订单发货了吗？..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+
+  <script>
+    const sessionId = "sess_" + Math.random().toString(36).substring(2, 8);
+    const userId = "user_buyer_1";
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+
+      const msgBox = document.getElementById("messages");
+      msgBox.innerHTML += '<div class="msg user">' + escapeHtml(text) + '</div>';
+
+      const botMsgDiv = document.createElement("div");
+      botMsgDiv.className = "msg bot";
+      botMsgDiv.innerHTML = '<div class="thought">正在思考与检索...</div><div class="answer"></div>';
+      msgBox.appendChild(botMsgDiv);
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      try {
+        const resp = await fetch("/api/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, session_id: sessionId, query: text, stream: false })
+        });
+        const data = await resp.json();
+        const answerDiv = botMsgDiv.querySelector(".answer");
+        answerDiv.innerText = data.answer || "已收到您的提问。";
+
+        botMsgDiv.innerHTML += '<div class="feedback-bar">' +
+          '<button class="feedback-btn" onclick="sendFeedback(true, '' + escapeHtml(text) + '')">👍 有帮助</button>' +
+          '<button class="feedback-btn" onclick="sendFeedback(false, '' + escapeHtml(text) + '')">👎 无帮助</button>' +
+          '</div>';
+      } catch (err) {
+        botMsgDiv.querySelector(".answer").innerText = "抱歉，服务暂时遇到一点问题，请稍后重试。";
+      }
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    async function sendFeedback(useful, query) {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, session_id: sessionId, query: query, answer: "", useful: useful })
+      });
+      alert(useful ? "感谢您的认可！" : "感谢反馈，已将该问题流转至待优化问题池。");
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
+
