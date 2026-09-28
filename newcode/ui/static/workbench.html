@@ -23,7 +23,7 @@
   <div class="container">
     <h2>
       <span>低置信度与负反馈问题池 (Data Flywheel)</span>
-      <button class="btn btn-default" onclick="loadProblems()">🔄 刷新列表</button>
+      <button class="btn btn-default" id="refreshBtn">🔄 刷新列表</button>
     </h2>
     <table id="problemTable">
       <thead>
@@ -43,55 +43,182 @@
   </div>
 
   <script>
-    async function loadProblems() {
-      const res = await fetch("/api/workbench/problems?status=PENDING");
-      const data = await res.json();
-      const tbody = document.getElementById("tbody");
-      if (!data.problems || data.problems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#52c41a;padding:24px;">🎉 当前暂无待审核问题，知识库运行良好！</td></tr>';
-        return;
+    // Read access token from localStorage and attach Authorization header
+    function getAuthHeaders(customHeaders = {}) {
+      const headers = Object.assign({}, customHeaders);
+      const token = localStorage.getItem("suredesk_access_token");
+      if (token) {
+        headers["Authorization"] = "Bearer " + token;
       }
-      tbody.innerHTML = data.problems.map(p => `
-        <tr>
-          <td>${p.id}</td>
-          <td><span class="badge ${p.trigger_type==='CONFIDENCE_GATE'?'badge-gate':'badge-thumb'}">${p.trigger_type}</span></td>
-          <td><b>${p.query}</b><br><small style="color:#8c8c8c;">改写: ${p.rewritten_query}</small></td>
-          <td><span style="font-weight:bold;color:#1890ff;">${p.frequency}</span></td>
-          <td><textarea id="ans_${p.id}" rows="2" placeholder="在此输入官方标准解答..."></textarea></td>
-          <td>
-            <button class="btn btn-primary" onclick="adoptProblem('${p.id}')">采纳并入库</button>
-            <button class="btn btn-default" onclick="ignoreProblem('${p.id}')">忽略</button>
-          </td>
-        </tr>
-      `).join('');
+      return headers;
     }
 
-    async function adoptProblem(id) {
-      const answer = document.getElementById("ans_" + id).value.trim();
+    // Fetch pending problems and render table rows using DOM methods to prevent XSS
+    async function loadProblems() {
+      const tbody = document.getElementById("tbody");
+      tbody.replaceChildren();
+
+      const loadingTr = document.createElement("tr");
+      const loadingTd = document.createElement("td");
+      loadingTd.colSpan = 6;
+      loadingTd.style.textAlign = "center";
+      loadingTd.style.color = "#8c8c8c";
+      loadingTd.textContent = "正在加载中...";
+      loadingTr.appendChild(loadingTd);
+      tbody.appendChild(loadingTr);
+
+      try {
+        const headers = getAuthHeaders();
+        const res = await fetch("/api/workbench/problems?status=PENDING", {
+          headers: headers
+        });
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        const data = await res.json();
+        tbody.replaceChildren();
+
+        if (!data.problems || data.problems.length === 0) {
+          const emptyTr = document.createElement("tr");
+          const emptyTd = document.createElement("td");
+          emptyTd.colSpan = 6;
+          emptyTd.style.textAlign = "center";
+          emptyTd.style.color = "#52c41a";
+          emptyTd.style.padding = "24px";
+          emptyTd.textContent = "🎉 当前暂无待审核问题，知识库运行良好！";
+          emptyTr.appendChild(emptyTd);
+          tbody.appendChild(emptyTr);
+          return;
+        }
+
+        for (const p of data.problems) {
+          const tr = document.createElement("tr");
+
+          // ID column
+          const tdId = document.createElement("td");
+          tdId.textContent = p.id || "";
+          tr.appendChild(tdId);
+
+          // Trigger badge column
+          const tdTrigger = document.createElement("td");
+          const badge = document.createElement("span");
+          badge.className = "badge " + (p.trigger_type === "CONFIDENCE_GATE" ? "badge-gate" : "badge-thumb");
+          badge.textContent = p.trigger_type || "UNKNOWN";
+          tdTrigger.appendChild(badge);
+          tr.appendChild(tdTrigger);
+
+          // Query and rewritten query column
+          const tdQuery = document.createElement("td");
+          const bQuery = document.createElement("b");
+          bQuery.textContent = p.query || "";
+          tdQuery.appendChild(bQuery);
+
+          if (p.rewritten_query) {
+            tdQuery.appendChild(document.createElement("br"));
+            const smallRewritten = document.createElement("small");
+            smallRewritten.style.color = "#8c8c8c";
+            smallRewritten.textContent = "改写: " + p.rewritten_query;
+            tdQuery.appendChild(smallRewritten);
+          }
+          tr.appendChild(tdQuery);
+
+          // Frequency column
+          const tdFreq = document.createElement("td");
+          const spanFreq = document.createElement("span");
+          spanFreq.style.fontWeight = "bold";
+          spanFreq.style.color = "#1890ff";
+          spanFreq.textContent = String(p.frequency !== undefined ? p.frequency : 1);
+          tdFreq.appendChild(spanFreq);
+          tr.appendChild(tdFreq);
+
+          // Standard answer textarea column
+          const tdAns = document.createElement("td");
+          const textarea = document.createElement("textarea");
+          textarea.id = "ans_" + p.id;
+          textarea.rows = 2;
+          textarea.placeholder = "在此输入官方标准解答...";
+          if (p.standard_answer) {
+            textarea.value = p.standard_answer;
+          }
+          tdAns.appendChild(textarea);
+          tr.appendChild(tdAns);
+
+          // Action buttons column
+          const tdActions = document.createElement("td");
+          const adoptBtn = document.createElement("button");
+          adoptBtn.className = "btn btn-primary";
+          adoptBtn.textContent = "采纳并入库";
+          adoptBtn.addEventListener("click", () => adoptProblem(p.id, textarea));
+
+          const ignoreBtn = document.createElement("button");
+          ignoreBtn.className = "btn btn-default";
+          ignoreBtn.textContent = "忽略";
+          ignoreBtn.addEventListener("click", () => ignoreProblem(p.id));
+
+          tdActions.appendChild(adoptBtn);
+          tdActions.appendChild(ignoreBtn);
+          tr.appendChild(tdActions);
+
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        tbody.replaceChildren();
+        const errTr = document.createElement("tr");
+        const errTd = document.createElement("td");
+        errTd.colSpan = 6;
+        errTd.style.textAlign = "center";
+        errTd.style.color = "#cf1322";
+        errTd.textContent = "加载失败，请检查网络或认证配置后重试。";
+        errTr.appendChild(errTd);
+        tbody.appendChild(errTr);
+      }
+    }
+
+    // Adopt standard answer and sync knowledge base
+    async function adoptProblem(id, textareaElement) {
+      const answer = (textareaElement ? textareaElement.value : (document.getElementById("ans_" + id)?.value || "")).trim();
       if (!answer) {
         alert("请输入标准答案后再提交采纳！");
         return;
       }
-      await fetch("/api/workbench/adopt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problem_id: id, standard_answer: answer })
-      });
-      alert("✅ 已成功采纳，并同步更新写入知识库与向量引擎！");
-      loadProblems();
+      try {
+        const headers = getAuthHeaders({ "Content-Type": "application/json" });
+        const res = await fetch("/api/workbench/adopt", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ problem_id: id, standard_answer: answer })
+        });
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        alert("✅ 已成功采纳，并同步更新写入知识库与向量引擎！");
+        loadProblems();
+      } catch (err) {
+        alert("采纳提交失败，请重试。");
+      }
     }
 
+    // Ignore problem from review pool
     async function ignoreProblem(id) {
-      await fetch("/api/workbench/ignore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problem_id: id })
-      });
-      loadProblems();
+      try {
+        const headers = getAuthHeaders({ "Content-Type": "application/json" });
+        const res = await fetch("/api/workbench/ignore", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ problem_id: id })
+        });
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        loadProblems();
+      } catch (err) {
+        alert("忽略操作失败，请重试。");
+      }
     }
 
+    // Attach listener to refresh button and load initial problem list
+    document.getElementById("refreshBtn").addEventListener("click", loadProblems);
     loadProblems();
   </script>
 </body>
 </html>
-

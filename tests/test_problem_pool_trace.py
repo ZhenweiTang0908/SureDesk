@@ -2,13 +2,20 @@
 Unit tests for ProblemPoolService (3 entrance triggers, deduplication) and RequestTracer.
 """
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy import select, delete
-from newcode.core.database import init_db, AsyncSessionLocal
-from newcode.models.domain import ProblemPool, TriggerType, OperatorStatus, AuditLog, AuditStatus
-from newcode.services.problem_pool import ProblemPoolService, compute_text_similarity
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import delete, select
+
+from newcode.core.database import AsyncSessionLocal, init_db
 from newcode.core.tracing import RequestTracer
 from newcode.main import app
+from newcode.models.domain import (
+    AuditLog,
+    AuditStatus,
+    ProblemPool,
+    TriggerType,
+)
+from newcode.services.problem_pool import ProblemPoolService, compute_text_similarity
+from tests.auth_helpers import auth_headers
 
 
 @pytest.fixture(autouse=True)
@@ -73,6 +80,7 @@ async def test_feedback_api_thumbs_down_ingestion():
         # Negative feedback
         resp = await client.post(
             "/api/feedback",
+            headers=auth_headers("user_buyer_1"),
             json={
                 "user_id": "user_buyer_1",
                 "session_id": "sess_feedback",
@@ -124,4 +132,3 @@ async def test_request_tracer_and_audit_persistence():
         assert log is not None
         assert log.status == AuditStatus.ALLOWED
         assert log.details["total_tokens"] == 165
-

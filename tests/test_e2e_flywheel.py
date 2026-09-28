@@ -6,13 +6,16 @@ End-to-End closed-loop test for Data Flywheel:
 4. Re-query -> Successfully hits newly updated knowledge!
 """
 import pytest
-from httpx import AsyncClient, ASGITransport
-from newcode.core.database import init_db, AsyncSessionLocal
-from newcode.models.domain import ProblemPool, OperatorStatus, TriggerType
-from newcode.rag.engine import HybridRetrievalEngine
+from httpx import ASGITransport, AsyncClient
+
+from newcode.core.database import init_db
 from newcode.guard.confidence_gate import ConfidenceGate
-from newcode.services.problem_pool import ProblemPoolService
 from newcode.main import app
+from newcode.models.domain import OperatorStatus, TriggerType, UserRole
+from newcode.rag.engine import HybridRetrievalEngine
+from newcode.services.problem_pool import ProblemPoolService
+from newcode.services.runtime import application_services
+from tests.auth_helpers import auth_headers
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +53,11 @@ async def test_end_to_end_flywheel_closed_loop():
     # Step 2: Operator lists pending problems via workbench API
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        list_resp = await client.get("/api/workbench/problems?status=PENDING")
+        operator_headers = auth_headers("operator_e2e", UserRole.OPERATOR)
+        list_resp = await client.get(
+            "/api/workbench/problems?status=PENDING",
+            headers=operator_headers,
+        )
         assert list_resp.status_code == 200
         problems = list_resp.json()["problems"]
         target = next((p for p in problems if p["id"] == problem.id), None)
@@ -61,23 +68,18 @@ async def test_end_to_end_flywheel_closed_loop():
         std_answer = "凡在官方旗舰店购买任意型号智能手机，均免费获赠一年原厂碎屏保，碎屏支持免费换新一次。"
         adopt_resp = await client.post(
             "/api/workbench/adopt",
+            headers=operator_headers,
             json={"problem_id": problem.id, "standard_answer": std_answer},
         )
         assert adopt_resp.status_code == 200
         assert adopt_resp.json()["success"] is True
 
-        # Step 4: Knowledge base syncs the newly adopted FAQ chunk
-        adopted_doc = f"# 售后与增值保障\n\n### 手机碎屏险服务\n{std_answer}"
-        engine.add_markdown_document(adopted_doc, source_doc="运营审核知识库回流")
-
     # Step 5: User queries the same question again
-    re_hits = engine.retrieve(test_query, top_k=3)
+    re_hits = application_services.rag_engine.retrieve(test_query, top_k=3)
     re_decision = gate.evaluate(test_query, re_hits)
 
     # Now confidence gate passes!
     assert re_decision.passed is True
     assert len(re_hits) > 0
     top_hit = re_hits[0].chunk
-    assert "手机碎屏险服务" in top_hit.title_path
     assert "免费获赠一年原厂碎屏保" in top_hit.content
-

@@ -5,21 +5,24 @@ Implements a fast, dependency-free softmax linear classifier on top of n-gram em
 from __future__ import annotations
 
 import json
+import zlib
 from pathlib import Path
+
 import numpy as np
+
 from newcode.offline.dataset_prep import DatasetSplit, prepare_dataset
 
 
 def extract_features(texts: list[str], dim: int = 128) -> np.ndarray:
-    """Encodes texts into dense feature vectors using character bi-grams."""
+    """Encodes texts into dense feature vectors using deterministic character and bi-gram hashing."""
     features = np.zeros((len(texts), dim), dtype=np.float32)
     for row, text in enumerate(texts):
         for i in range(len(text)):
             c = text[i]
-            features[row, abs(hash(c)) % dim] += 1.0
+            features[row, zlib.crc32(c.encode("utf-8")) % dim] += 1.0
             if i > 0:
                 bigram = text[i - 1:i + 1]
-                features[row, abs(hash(bigram)) % dim] += 2.0
+                features[row, zlib.crc32(bigram.encode("utf-8")) % dim] += 2.0
         norm = np.linalg.norm(features[row])
         if norm > 0:
             features[row] /= norm
@@ -84,8 +87,15 @@ class LightweightIntentClassifier:
         return self.softmax(logits)
 
 
-def train_offline_pipeline(output_dir: str = "/Users/niuniutang/Code/NewCode/models_checkpoint") -> LightweightIntentClassifier:
-    dataset = prepare_dataset()
+DEFAULT_CHECKPOINT_DIR = str(Path(__file__).resolve().parents[2] / "models_checkpoint")
+
+
+def train_offline_pipeline(
+    output_dir: str | Path | None = None,
+    dataset: DatasetSplit | None = None,
+) -> LightweightIntentClassifier:
+    if dataset is None:
+        dataset = prepare_dataset()
     X_train = extract_features(dataset.train_texts)
     y_train = np.array(dataset.train_labels)
 
@@ -94,7 +104,7 @@ def train_offline_pipeline(output_dir: str = "/Users/niuniutang/Code/NewCode/mod
     model.train(X_train, y_train, epochs=150, lr=0.8)
 
     # Save checkpoint
-    out_path = Path(output_dir)
+    out_path = Path(output_dir) if output_dir is not None else Path(DEFAULT_CHECKPOINT_DIR)
     out_path.mkdir(parents=True, exist_ok=True)
     np.save(out_path / "weights_W.npy", model.W)
     np.save(out_path / "weights_b.npy", model.b)

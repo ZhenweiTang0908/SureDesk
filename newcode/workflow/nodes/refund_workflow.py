@@ -3,12 +3,13 @@ Deterministic Refund Workflow enforcing hard business rules.
 """
 from __future__ import annotations
 
+import hashlib
 import re
-from datetime import datetime, timezone
-import uuid
-from sqlalchemy import select
+
+from sqlalchemy import select, update
+
 from newcode.core.database import AsyncSessionLocal
-from newcode.models.domain import Order, OrderStatus, AuditLog, AuditStatus
+from newcode.models.domain import AuditLog, AuditStatus, Order, OrderStatus
 from newcode.workflow.state import CustomerServiceState
 
 
@@ -75,16 +76,52 @@ async def execute_refund_workflow(state: CustomerServiceState) -> CustomerServic
             state.thoughts.append("触发确定性规则防御：订单签收超过7天，硬规则强制拒绝，禁止随意放行。")
             return state
 
-        if order.status in (OrderStatus.REFUNDED, "REFUNDED"):
-            state.refund_status = "REJECTED_POLICY"
-            state.final_answer = f"订单 {order_id} 已经是已退款状态，无需重复申请。"
+        if order.status in (OrderStatus.REFUNDED, OrderStatus.REFUNDED.value):
+            voucher = _refund_voucher(order_id)
+            state.refund_status = "APPROVED"
+            state.refund_voucher = voucher
+            state.final_answer = f"订单 {order_id} 已完成退款，退款凭证编号：{voucher}。"
             return state
 
-        # 4. Eligible for refund
-        voucher = f"RFV-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
-        order.status = OrderStatus.REFUNDED
+        eligible_statuses = {
+            OrderStatus.PAID_UNSHIPPED.value,
+            OrderStatus.SHIPPED.value,
+            OrderStatus.DELIVERED.value,
+        }
+        current_status = order.status.value if hasattr(order.status, "value") else str(order.status)
+        if current_status not in eligible_statuses:
+            state.refund_status = "REJECTED_POLICY"
+            state.final_answer = f"订单 {order_id} 当前状态为 {current_status}，不能重复或直接发起退款。"
+            return state
+
+        # The conditional update is the idempotency boundary for concurrent requests.
+        update_result = await session.execute(
+            update(Order)
+            .where(Order.id == order_id, Order.status == current_status)
+            .values(status=OrderStatus.REFUNDED.value)
+        )
+        if update_result.rowcount != 1:
+            await session.rollback()
+            refreshed = (
+                await session.execute(select(Order).where(Order.id == order_id))
+            ).scalar_one()
+            refreshed_status = (
+                refreshed.status.value if hasattr(refreshed.status, "value") else str(refreshed.status)
+            )
+            if refreshed_status == OrderStatus.REFUNDED.value:
+                state.refund_status = "APPROVED"
+                state.refund_voucher = _refund_voucher(order_id)
+                state.final_answer = (
+                    f"订单 {order_id} 已完成退款，退款凭证编号：{state.refund_voucher}。"
+                )
+                return state
+            state.refund_status = "REJECTED_POLICY"
+            state.final_answer = "订单状态已发生变化，请刷新后重新确认。"
+            return state
+
         await session.commit()
 
+        voucher = _refund_voucher(order_id)
         state.refund_status = "APPROVED"
         state.refund_voucher = voucher
         state.final_answer = (
@@ -94,3 +131,8 @@ async def execute_refund_workflow(state: CustomerServiceState) -> CustomerServic
         state.thoughts.append(f"退款校验通过，生成退款凭证 {voucher}，订单状态已更新为 REFUNDED。")
         return state
 
+
+def _refund_voucher(order_id: str) -> str:
+    """Return a stable voucher so retries cannot create multiple refund identities."""
+    digest = hashlib.sha256(order_id.encode("utf-8")).hexdigest()[:12].upper()
+    return f"RFV-{digest}"

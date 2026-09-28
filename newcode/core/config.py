@@ -50,6 +50,19 @@ class Settings(BaseSettings):
         default="INFO",
         description="Logging level",
     )
+    AUTH_SECRET: str = Field(
+        default="",
+        description="HMAC secret for signed access tokens; required to start the application",
+    )
+    ACCESS_TOKEN_TTL_SECONDS: int = Field(
+        default=3600,
+        ge=60,
+        description="Signed access token lifetime in seconds",
+    )
+    CORS_ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:8000,http://127.0.0.1:8000",
+        description="Comma-separated browser origins allowed to call the API",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -57,6 +70,11 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=True,
     )
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        """Return normalized explicit browser origins."""
+        return [origin.strip() for origin in self.CORS_ALLOWED_ORIGINS.split(",") if origin.strip()]
 
 
 @lru_cache
@@ -66,4 +84,3 @@ def get_settings() -> Settings:
 
 
 settings: Settings = get_settings()
-

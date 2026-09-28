@@ -1,12 +1,17 @@
 """
 Unit tests for CustomerServiceWorkflow, deterministic refund state machine, suspension, and agent node.
 """
+import asyncio
+
 import pytest
 from sqlalchemy import delete
-from newcode.core.database import init_db, AsyncSessionLocal
-from newcode.models.domain import User, Order, OrderStatus
+
+from newcode.core.database import AsyncSessionLocal, init_db
+from newcode.models.domain import Order, OrderStatus, User
 from newcode.rag.engine import HybridRetrievalEngine
 from newcode.workflow.graph import CustomerServiceWorkflow
+from newcode.workflow.nodes.refund_workflow import execute_refund_workflow
+from newcode.workflow.state import CustomerServiceState
 
 SAMPLE_POLICY = """# 商城售后政策
 ## 7天无理由退货
@@ -96,7 +101,7 @@ async def test_chitchat_and_complaint_routing():
         session_id="sess_chat",
         query="你好呀",
     )
-    assert "MewHelp" in res_chat.final_answer
+    assert "SureDesk" in res_chat.final_answer
 
     # Complaint
     res_complaint = await workflow.run(
@@ -121,3 +126,42 @@ async def test_rag_knowledge_answering():
     assert "7日内" in res.final_answer
     assert "【依据政策来源】" in res.final_answer
 
+
+@pytest.mark.asyncio
+async def test_concurrent_refund_requests_are_idempotent():
+    def request_state() -> CustomerServiceState:
+        return CustomerServiceState(
+            user_id="user_wf_buyer",
+            session_id="sess_concurrent_refund",
+            query="退款 ord_wf_1",
+            rewritten_query="退款 ord_wf_1",
+        )
+
+    first, second = await asyncio.gather(
+        execute_refund_workflow(request_state()),
+        execute_refund_workflow(request_state()),
+    )
+
+    assert first.refund_status == "APPROVED"
+    assert second.refund_status == "APPROVED"
+    assert first.refund_voucher == second.refund_voucher
+
+
+@pytest.mark.asyncio
+async def test_suspended_session_cannot_resume_for_another_user():
+    workflow = CustomerServiceWorkflow()
+    victim_state = await workflow.run(
+        user_id="user_wf_buyer",
+        session_id="shared_session_id",
+        query="我想申请退款",
+    )
+    assert victim_state.is_suspended is True
+
+    attacker_state = await workflow.run(
+        user_id="different_user",
+        session_id="shared_session_id",
+        query="ord_wf_1",
+    )
+
+    assert attacker_state.user_id == "different_user"
+    assert victim_state.refund_status == "PENDING_ORDER_ID"

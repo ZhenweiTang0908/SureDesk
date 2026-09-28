@@ -26,69 +26,302 @@
   <div class="chat-container">
     <div class="header">
       <span>SureDesk 电商 AI 智能客服</span>
-      <a href="/workbench.html" target="_blank">运营审核工作台</a>
+      <a href="/workbench" target="_blank">运营审核工作台</a>
     </div>
     <div class="messages" id="messages">
       <div class="msg bot">您好！我是 SureDesk 智能客服，支持订单查询、物流跟踪、7天退换货及售前政策咨询。请问有什么可以帮您？</div>
     </div>
     <div class="input-box">
-      <input type="text" id="userInput" placeholder="输入您的问题，如：我的订单发货了吗？..." onkeydown="if(event.key==='Enter') sendMessage()" />
-      <button onclick="sendMessage()">发送</button>
+      <input type="text" id="userInput" placeholder="输入您的问题，如：我的订单发货了吗？..." />
+      <button id="sendBtn">发送</button>
     </div>
   </div>
 
   <script>
+    // Session identifier and signed identity lookup
     const sessionId = "sess_" + Math.random().toString(36).substring(2, 8);
-    const userId = "user_buyer_1";
 
+    function getAuthenticatedUserId() {
+      const token = localStorage.getItem("suredesk_access_token");
+      if (!token) return null;
+      try {
+        const encodedPayload = token.split(".")[0];
+        const normalizedPayload = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+        const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, "=");
+        const payload = JSON.parse(atob(paddedPayload));
+        return typeof payload.user_id === "string" ? payload.user_id : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    // Read access token from localStorage and attach Authorization header
+    function getAuthHeaders(customHeaders = {}) {
+      const headers = Object.assign({}, customHeaders);
+      const token = localStorage.getItem("suredesk_access_token");
+      if (token) {
+        headers["Authorization"] = "Bearer " + token;
+      }
+      return headers;
+    }
+
+    // Parse and dispatch a single SSE event block
+    function parseAndDispatchSseBlock(block, handlers) {
+      const lines = block.split(/\r?\n/);
+      let eventType = "message";
+      const dataLines = [];
+
+      for (const line of lines) {
+        if (line.startsWith("event:")) {
+          eventType = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).trim());
+        }
+      }
+
+      if (dataLines.length === 0) return;
+      const rawData = dataLines.join("\n");
+
+      let payload;
+      try {
+        payload = JSON.parse(rawData);
+      } catch (err) {
+        payload = rawData;
+      }
+
+      if (eventType === "thought") {
+        const thoughtText = typeof payload === "object" && payload ? (payload.thought || payload.content || "") : String(payload);
+        if (thoughtText && handlers.onThought) {
+          handlers.onThought(thoughtText);
+        }
+      } else if (eventType === "answer") {
+        let chunk = "";
+        if (typeof payload === "object" && payload) {
+          chunk = payload.chunk !== undefined ? payload.chunk : (payload.content !== undefined ? payload.content : "");
+        } else {
+          chunk = String(payload);
+        }
+        if (chunk && handlers.onAnswerChunk) {
+          handlers.onAnswerChunk(chunk);
+        }
+      } else if (eventType === "evidence") {
+        if (handlers.onEvidence) {
+          handlers.onEvidence(payload);
+        }
+      } else if (eventType === "error") {
+        const errMsg = typeof payload === "object" && payload ? (payload.message || payload.error || "服务发生错误") : String(payload);
+        if (handlers.onError) {
+          handlers.onError(errMsg);
+        }
+      }
+    }
+
+    // Consume Server-Sent Events stream using ReadableStreamDefaultReader
+    async function consumeSseStream(response, handlers) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Match event boundaries (\r\n\r\n or \n\n)
+        let boundaryMatch;
+        while ((boundaryMatch = buffer.match(/\r?\n\r?\n/)) !== null) {
+          const boundaryIndex = boundaryMatch.index;
+          const delimiterLength = boundaryMatch[0].length;
+          const eventBlock = buffer.slice(0, boundaryIndex);
+          buffer = buffer.slice(boundaryIndex + delimiterLength);
+
+          parseAndDispatchSseBlock(eventBlock, handlers);
+        }
+      }
+
+      if (buffer.trim()) {
+        parseAndDispatchSseBlock(buffer, handlers);
+      }
+    }
+
+    // Render citations or evidence
+    function renderEvidence(container, evidenceList) {
+      if (!evidenceList || !Array.isArray(evidenceList) || evidenceList.length === 0) return;
+      const citationDiv = document.createElement("div");
+      citationDiv.className = "citation";
+      const titles = evidenceList
+        .map(e => e.doc_title || e.title || (e.doc_id ? "文档 " + e.doc_id : ""))
+        .filter(Boolean);
+      if (titles.length > 0) {
+        citationDiv.textContent = "参考依据: " + titles.join("、");
+        container.appendChild(citationDiv);
+      }
+    }
+
+    // Send a message and stream assistant response
     async function sendMessage() {
       const input = document.getElementById("userInput");
       const text = input.value.trim();
       if (!text) return;
+      const userId = getAuthenticatedUserId();
+      if (!userId) {
+        window.alert("请先配置有效的 SureDesk 访问令牌。");
+        return;
+      }
       input.value = "";
 
       const msgBox = document.getElementById("messages");
-      msgBox.innerHTML += '<div class="msg user">' + escapeHtml(text) + '</div>';
 
+      // Build user message element securely with textContent to prevent DOM XSS
+      const userMsgDiv = document.createElement("div");
+      userMsgDiv.className = "msg user";
+      userMsgDiv.textContent = text;
+      msgBox.appendChild(userMsgDiv);
+
+      // Build bot message container
       const botMsgDiv = document.createElement("div");
       botMsgDiv.className = "msg bot";
-      botMsgDiv.innerHTML = '<div class="thought">正在思考与检索...</div><div class="answer"></div>';
+
+      const thoughtDiv = document.createElement("div");
+      thoughtDiv.className = "thought";
+      thoughtDiv.textContent = "正在思考与检索...";
+      botMsgDiv.appendChild(thoughtDiv);
+
+      const answerDiv = document.createElement("div");
+      answerDiv.className = "answer";
+      botMsgDiv.appendChild(answerDiv);
+
       msgBox.appendChild(botMsgDiv);
       msgBox.scrollTop = msgBox.scrollHeight;
 
+      let accumulatedAnswer = "";
+
       try {
+        const headers = getAuthHeaders({ "Content-Type": "application/json" });
         const resp = await fetch("/api/chat/stream", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, session_id: sessionId, query: text, stream: false })
+          headers: headers,
+          body: JSON.stringify({
+            user_id: userId,
+            session_id: sessionId,
+            query: text,
+            stream: true
+          })
         });
-        const data = await resp.json();
-        const answerDiv = botMsgDiv.querySelector(".answer");
-        answerDiv.innerText = data.answer || "已收到您的提问。";
 
-        botMsgDiv.innerHTML += '<div class="feedback-bar">' +
-          '<button class="feedback-btn" onclick="sendFeedback(true, '' + escapeHtml(text) + '')">👍 有帮助</button>' +
-          '<button class="feedback-btn" onclick="sendFeedback(false, '' + escapeHtml(text) + '')">👎 无帮助</button>' +
-          '</div>';
+        if (!resp.ok) {
+          throw new Error("HTTP error " + resp.status);
+        }
+
+        const contentType = resp.headers.get("content-type") || "";
+
+        // Handle JSON response fallback if endpoint responds synchronously
+        if (contentType.includes("application/json")) {
+          const data = await resp.json();
+          if (data.thought) {
+            thoughtDiv.textContent = data.thought;
+          }
+          accumulatedAnswer = data.answer || "已收到您的提问。";
+          answerDiv.textContent = accumulatedAnswer;
+          if (data.evidence) {
+            renderEvidence(botMsgDiv, data.evidence);
+          }
+        } else if (resp.body && resp.body.getReader) {
+          // Stream SSE events
+          await consumeSseStream(resp, {
+            onThought: (thoughtText) => {
+              thoughtDiv.textContent = thoughtText;
+              msgBox.scrollTop = msgBox.scrollHeight;
+            },
+            onAnswerChunk: (chunk) => {
+              accumulatedAnswer += chunk;
+              answerDiv.textContent = accumulatedAnswer;
+              msgBox.scrollTop = msgBox.scrollHeight;
+            },
+            onEvidence: (evidenceList) => {
+              renderEvidence(botMsgDiv, evidenceList);
+              msgBox.scrollTop = msgBox.scrollHeight;
+            },
+            onError: (errMsg) => {
+              answerDiv.textContent = errMsg;
+              msgBox.scrollTop = msgBox.scrollHeight;
+            }
+          });
+        }
+
+        if (!accumulatedAnswer && !answerDiv.textContent) {
+          accumulatedAnswer = "已收到您的提问。";
+          answerDiv.textContent = accumulatedAnswer;
+        }
+
+        // Build feedback bar securely using DOM methods and addEventListener
+        const feedbackBar = document.createElement("div");
+        feedbackBar.className = "feedback-bar";
+
+        const thumbUpBtn = document.createElement("button");
+        thumbUpBtn.className = "feedback-btn";
+        thumbUpBtn.textContent = "👍 有帮助";
+        thumbUpBtn.addEventListener("click", () => {
+          sendFeedback(true, text, accumulatedAnswer, feedbackBar);
+        });
+
+        const thumbDownBtn = document.createElement("button");
+        thumbDownBtn.className = "feedback-btn";
+        thumbDownBtn.textContent = "👎 无帮助";
+        thumbDownBtn.addEventListener("click", () => {
+          sendFeedback(false, text, accumulatedAnswer, feedbackBar);
+        });
+
+        feedbackBar.appendChild(thumbUpBtn);
+        feedbackBar.appendChild(thumbDownBtn);
+        botMsgDiv.appendChild(feedbackBar);
+
       } catch (err) {
-        botMsgDiv.querySelector(".answer").innerText = "抱歉，服务暂时遇到一点问题，请稍后重试。";
+        answerDiv.textContent = "抱歉，服务暂时遇到一点问题，请稍后重试。";
       }
+
       msgBox.scrollTop = msgBox.scrollHeight;
     }
 
-    async function sendFeedback(useful, query) {
-      await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, session_id: sessionId, query: query, answer: "", useful: useful })
-      });
-      alert(useful ? "感谢您的认可！" : "感谢反馈，已将该问题流转至待优化问题池。");
+    // Submit user feedback preserving actual bot answer and authorization token
+    async function sendFeedback(useful, query, answer, barElement) {
+      const userId = getAuthenticatedUserId();
+      if (!userId) {
+        window.alert("请先配置有效的 SureDesk 访问令牌。");
+        return;
+      }
+      try {
+        const headers = getAuthHeaders({ "Content-Type": "application/json" });
+        await fetch("/api/feedback", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            user_id: userId,
+            session_id: sessionId,
+            query: query,
+            answer: answer || "",
+            useful: useful
+          })
+        });
+
+        if (barElement) {
+          barElement.textContent = useful ? "已标记：👍 认为有帮助" : "已标记：👎 已转入问题池待优化";
+          barElement.style.color = "#8c8c8c";
+        }
+        alert(useful ? "感谢您的认可！" : "感谢反馈，已将该问题流转至待优化问题池。");
+      } catch (err) {
+        alert("反馈提交失败，请稍后重试。");
+      }
     }
 
-    function escapeHtml(s) {
-      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
+    // Attach event listeners for user input
+    document.getElementById("userInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    });
+    document.getElementById("sendBtn").addEventListener("click", sendMessage);
   </script>
 </body>
 </html>
-

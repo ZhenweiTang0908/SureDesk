@@ -9,18 +9,29 @@ Verifies all 6 Acceptance Criteria from MewHelp / NewCode Feature Spec:
 6. Data Flywheel Full Closed-Loop
 """
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy import select, delete
-from newcode.core.database import init_db, AsyncSessionLocal
-from newcode.models.domain import User, Order, OrderStatus, AuditLog, AuditStatus, ProblemPool, OperatorStatus
-from newcode.services.router import ContextQueryRewriterAndRouter
-from newcode.tools.base import SecurityContext, IDORForbiddenException
-from newcode.tools.order_tools import QueryOrderTool
-from newcode.rag.engine import HybridRetrievalEngine
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import delete, select
+
+from newcode.core.database import AsyncSessionLocal, init_db
 from newcode.guard.confidence_gate import ConfidenceGate
-from newcode.workflow.graph import CustomerServiceWorkflow
-from newcode.services.problem_pool import ProblemPoolService
 from newcode.main import app
+from newcode.models.domain import (
+    AuditLog,
+    AuditStatus,
+    OperatorStatus,
+    Order,
+    OrderStatus,
+    User,
+    UserRole,
+)
+from newcode.rag.engine import HybridRetrievalEngine
+from newcode.services.problem_pool import ProblemPoolService
+from newcode.services.router import ContextQueryRewriterAndRouter
+from newcode.services.runtime import application_services
+from newcode.tools.base import IDORForbiddenException, SecurityContext
+from newcode.tools.order_tools import QueryOrderTool
+from newcode.workflow.graph import CustomerServiceWorkflow
+from tests.auth_helpers import auth_headers
 
 POLICY_DOC = """# 电商政策
 ## 7天退货
@@ -139,15 +150,12 @@ async def test_criterion_6_data_flywheel_closed_loop():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         await client.post(
             "/api/workbench/adopt",
+            headers=auth_headers("operator_acceptance", UserRole.OPERATOR),
             json={"problem_id": problem.id, "standard_answer": "平台已全量支持中国人民银行数字人民币App快捷扫码支付。"},
         )
 
-    # Sync to engine
-    engine.add_markdown_document(f"### 数字人民币支付\n平台已全量支持中国人民银行数字人民币App快捷扫码支付。")
-
     # Re-query
-    re_hits = engine.retrieve(test_q, top_k=3)
+    re_hits = application_services.rag_engine.retrieve(test_q, top_k=3)
     re_dec = gate.evaluate(test_q, re_hits)
     assert re_dec.passed is True
     assert "数字人民币" in re_hits[0].chunk.content
-

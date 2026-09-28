@@ -4,11 +4,13 @@ Logistics query tools with IDOR protection.
 from __future__ import annotations
 
 from typing import Any
+
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+
 from newcode.core.database import AsyncSessionLocal
-from newcode.models.domain import Logistics, Order, AuditLog, AuditStatus
-from newcode.tools.base import BaseTool, SecurityContext, IDORForbiddenException
+from newcode.models.domain import AuditLog, AuditStatus, Logistics
+from newcode.tools.base import BaseTool, IDORForbiddenException, SecurityContext
 
 
 class QueryLogisticsParams(BaseModel):
@@ -55,6 +57,7 @@ class QueryLogisticsTool(BaseTool):
             return {
                 "success": True,
                 "logistics": {
+                    "order_id": logistics.order_id,
                     "tracking_number": logistics.tracking_number,
                     "carrier": logistics.carrier,
                     "status": logistics.status.value if hasattr(logistics.status, "value") else str(logistics.status),
@@ -62,4 +65,3 @@ class QueryLogisticsTool(BaseTool):
                     "updated_at": logistics.updated_at.isoformat() if logistics.updated_at else None,
                 },
             }
-

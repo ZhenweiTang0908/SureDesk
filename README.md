@@ -188,7 +188,8 @@ SureDesk/
 
 ```bash
 # Clone and enter the project directory
-cd /Users/niuniutang/Code/NewCode
+git clone git@github.com:ZhenweiTang0908/SureDesk.git
+cd SureDesk
 
 # Create and activate virtual environment
 uv venv .venv
@@ -206,7 +207,9 @@ Configure your `.env` file in the project root:
 OPENAI_API_BASE=https://1yuanapi.com/v1
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-5.6-terra
-DATABASE_URL=sqlite+aiosqlite:///newcode.db
+DATABASE_URL=sqlite+aiosqlite:///suredesk.db
+AUTH_SECRET=replace-with-a-long-random-secret
+CORS_ALLOWED_ORIGINS=http://localhost:8000
 DEBUG=False
 ```
 
@@ -222,6 +225,24 @@ DEBUG=False
 .venv/bin/uvicorn newcode.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+### 6. Create Local Access Tokens
+
+SureDesk requires a signed bearer token. Create a buyer token for chat and an
+operator token for the review workbench:
+
+```bash
+.venv/bin/python scripts/create_access_token.py demo-buyer --role buyer
+.venv/bin/python scripts/create_access_token.py demo-operator --role operator
+```
+
+In the browser console for the page you want to use, store the matching token
+and reload the page:
+
+```javascript
+localStorage.setItem("suredesk_access_token", "paste-token-here");
+location.reload();
+```
+
 Access the services in your browser:
 - **Customer Chat Interface**: [http://localhost:8000/chat](http://localhost:8000/chat)
 - **Operator Review Workbench**: [http://localhost:8000/workbench](http://localhost:8000/workbench)
@@ -231,7 +252,8 @@ Access the services in your browser:
 
 ## Automated Verification & Benchmarks
 
-Run the complete test suite (57 tests covering all requirements R1-R12):
+Run the complete test suite covering requirements R1-R12, authentication,
+concurrency safety, frontend security, and the offline pipeline:
 
 ```bash
 # Run all unit and integration tests
@@ -321,7 +343,8 @@ SureDesk（定策）是一个具备业务确定性约束、零信任越权防御
 ### 2. 虚拟环境与依赖安装
 
 ```bash
-cd /Users/niuniutang/Code/NewCode
+git clone git@github.com:ZhenweiTang0908/SureDesk.git
+cd SureDesk
 
 # 创建并激活虚拟环境
 uv venv .venv
@@ -339,7 +362,9 @@ uv pip install -e ".[dev]"
 OPENAI_API_BASE=https://1yuanapi.com/v1
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-5.6-terra
-DATABASE_URL=sqlite+aiosqlite:///newcode.db
+DATABASE_URL=sqlite+aiosqlite:///suredesk.db
+AUTH_SECRET=replace-with-a-long-random-secret
+CORS_ALLOWED_ORIGINS=http://localhost:8000
 DEBUG=False
 ```
 
@@ -355,6 +380,22 @@ DEBUG=False
 .venv/bin/uvicorn newcode.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+### 6. 创建本地访问令牌
+
+SureDesk 的接口要求使用签名 Bearer 令牌。分别为买家对话端和运营审核工作台创建令牌：
+
+```bash
+.venv/bin/python scripts/create_access_token.py demo-buyer --role buyer
+.venv/bin/python scripts/create_access_token.py demo-operator --role operator
+```
+
+在对应页面的浏览器控制台中保存相应令牌，然后刷新页面：
+
+```javascript
+localStorage.setItem("suredesk_access_token", "在此粘贴令牌");
+location.reload();
+```
+
 服务启动后，可在浏览器中直接访问：
 - **终端买家对话端**：[http://localhost:8000/chat](http://localhost:8000/chat)
 - **运营审核工作台**：[http://localhost:8000/workbench](http://localhost:8000/workbench)
@@ -365,7 +406,7 @@ DEBUG=False
 ## 自动化测试与验证
 
 ```bash
-# 运行全部 57 项自动化测试（覆盖 R1 ~ R12）
+# 运行完整自动化测试（覆盖 R1 ~ R12、鉴权、并发安全、前端安全与离线流程）
 .venv/bin/pytest tests/ -v
 
 # 运行全链路 6 项验收标准测试
