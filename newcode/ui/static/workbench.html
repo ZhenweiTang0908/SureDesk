@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SureDesk · 运营审核台</title>
+  <title>SureDesk · 审核台</title>
   <style>
     :root {
       color-scheme: light;
       --canvas: #e9ede6;
       --surface: #fbfbf7;
-      --surface-raised: #ffffff;
+      --white: #ffffff;
       --ink: #17211c;
-      --muted: #64716a;
+      --muted: #6b776f;
       --line: #d3dbd1;
       --line-strong: #bcc7ba;
       --pine: #1c4a3b;
@@ -27,6 +27,7 @@
     }
 
     * { box-sizing: border-box; }
+
     [hidden] { display: none !important; }
 
     body {
@@ -60,10 +61,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
-      width: min(1260px, calc(100vw - 48px));
+      gap: 20px;
+      width: min(1180px, calc(100vw - 40px));
       margin: 0 auto;
-      padding: 17px 0;
+      padding: 15px 0;
     }
 
     .brand {
@@ -72,151 +73,108 @@
       gap: 12px;
       color: #fff;
       text-decoration: none;
+      font-family: var(--serif);
+      font-size: 21px;
     }
 
     .brand-mark {
       display: grid;
       place-items: center;
-      width: 34px;
-      height: 34px;
-      border: 1.5px solid rgba(255, 255, 255, 0.7);
+      width: 32px;
+      height: 32px;
+      border: 1.5px solid rgba(255, 255, 255, 0.72);
       color: #fff;
       font-family: var(--serif);
-      font-size: 19px;
+      font-size: 18px;
       line-height: 1;
       transform: rotate(-3deg);
-      box-shadow: inset 0 0 0 3px var(--pine), inset 0 0 0 4px rgba(255, 255, 255, 0.26);
+      box-shadow: inset 0 0 0 3px var(--pine), inset 0 0 0 4px rgba(255, 255, 255, 0.24);
     }
 
-    .brand-text {
-      font-family: var(--serif);
-      font-size: 21px;
-      letter-spacing: 0.01em;
-    }
-
-    .brand-text em {
-      margin-left: 8px;
+    .brand em {
       color: rgba(243, 246, 241, 0.62);
       font-family: var(--sans);
-      font-size: 11px;
-      font-style: normal;
-      letter-spacing: 0.12em;
-    }
-
-    .masthead-nav {
-      display: flex;
-      align-items: center;
-      gap: 16px;
       font-size: 12px;
+      font-style: normal;
     }
 
-    .masthead-nav a {
-      color: #f3f6f1;
-      text-decoration-color: rgba(255, 255, 255, 0.45);
-      text-underline-offset: 4px;
+    .masthead a.back {
+      color: #fff;
+      font-size: 12px;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      padding-bottom: 2px;
     }
 
-    .masthead-meta {
-      color: rgba(243, 246, 241, 0.5);
-      font-family: var(--mono);
-      font-size: 10px;
-    }
+    .masthead a.back:hover { border-bottom-color: #fff; }
 
     .page {
-      width: min(1260px, calc(100vw - 48px));
+      width: min(1180px, calc(100vw - 40px));
       margin: 0 auto;
-      padding: 40px 0 48px;
+      padding: 30px 0 44px;
     }
 
-    .intro {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 44px;
-      align-items: end;
-      padding-bottom: 30px;
-      border-bottom: 1px solid var(--line-strong);
+    .page-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 20px;
     }
 
-    .intro h1 {
-      max-width: 18ch;
+    .page-head h1 {
       margin: 0;
       font-family: var(--serif);
-      font-size: clamp(36px, 4.2vw, 54px);
+      font-size: clamp(32px, 4vw, 44px);
       font-weight: 500;
-      line-height: 1.12;
       letter-spacing: -0.02em;
     }
 
-    .intro p {
-      max-width: 62ch;
-      margin: 16px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.75;
-    }
-
-    .stats {
-      display: flex;
-      gap: 0;
-      margin: 0;
-    }
-
-    .stats div {
-      min-width: 108px;
-      padding: 0 20px;
-      border-left: 1px solid var(--line-strong);
-    }
-
-    .stats div:first-child { padding-left: 0; border-left: 0; }
-    .stats div:last-child { padding-right: 0; }
-
-    .stats dt {
-      color: var(--muted);
-      font-size: 11px;
-      white-space: nowrap;
-    }
-
-    .stats dd {
-      margin: 4px 0 0;
+    .count {
+      display: grid;
+      place-items: center;
+      min-width: 56px;
+      height: 56px;
+      padding: 0 10px;
+      border: 1.5px solid var(--signal);
+      border-radius: 50%;
+      color: var(--signal);
       font-family: var(--serif);
-      font-size: 38px;
+      font-size: 27px;
       line-height: 1;
-      font-variant-numeric: tabular-nums;
+      transform: rotate(3deg);
     }
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.9fr);
-      gap: 20px;
-      margin-top: 24px;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+      gap: 18px;
       align-items: start;
     }
 
-    .queue-panel,
-    .detail {
+    .queue {
+      min-width: 0;
       border: 1px solid var(--line);
       background: var(--surface);
     }
 
-    .queue-panel { min-width: 0; }
-
     .toolbar {
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 12px 16px;
+      gap: 12px;
+      padding: 10px 14px;
       border-bottom: 1px solid var(--line);
-      background: var(--surface-raised);
+      background: var(--white);
     }
 
     .tabs {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
     }
 
     .tab {
-      padding: 7px 9px 6px;
+      padding: 7px 8px 6px;
       border: 0;
       border-bottom: 2px solid transparent;
       background: none;
@@ -240,8 +198,8 @@
       display: flex;
       flex: 1;
       align-items: center;
-      gap: 7px;
-      min-width: 120px;
+      gap: 6px;
+      min-width: 100px;
       padding: 6px 9px;
       border: 1px solid var(--line);
       border-radius: 3px;
@@ -263,37 +221,37 @@
     .search input::placeholder { color: #8c9790; }
 
     .refresh {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 10px;
+      display: grid;
+      flex: 0 0 30px;
+      place-items: center;
+      width: 30px;
+      height: 30px;
       border: 1px solid var(--line-strong);
       border-radius: 3px;
       background: #fff;
       color: var(--ink);
-      font-size: 12px;
       cursor: pointer;
-      white-space: nowrap;
     }
 
-    .refresh svg { width: 13px; height: 13px; }
+    .refresh svg { width: 14px; height: 14px; }
     .refresh:hover { border-color: var(--pine); }
     .refresh.is-loading svg { animation: spin 900ms linear infinite; }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .problem-list { min-height: 280px; }
+    .problem-list { min-height: 260px; }
 
     .problem-row {
       display: block;
       width: 100%;
-      padding: 16px 18px 15px;
+      padding: 15px 18px;
       border: 0;
       border-bottom: 1px solid var(--line);
       border-left: 3px solid transparent;
       background: transparent;
       text-align: left;
       cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease;
     }
 
     .problem-row:last-child { border-bottom: 0; }
@@ -308,16 +266,15 @@
       display: flex;
       align-items: center;
       gap: 9px;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
 
-    .row-id, .row-time {
+    .row-time {
+      margin-left: auto;
       color: var(--muted);
       font-family: var(--mono);
       font-size: 10px;
     }
-
-    .row-time { margin-left: auto; }
 
     .badge {
       display: inline-flex;
@@ -341,68 +298,51 @@
       line-height: 1.55;
     }
 
-    .row-rewrite {
-      margin: 5px 0 0;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.55;
-    }
-
-    .row-foot {
-      display: flex;
-      gap: 14px;
-      margin-top: 9px;
-      color: var(--muted);
-      font-size: 10px;
-    }
-
-    .row-foot span:last-child { margin-left: auto; color: var(--pine); }
-
     .detail {
       position: sticky;
-      top: 20px;
-      min-height: 420px;
-      background: var(--surface-raised);
+      top: 18px;
+      min-height: 380px;
+      border: 1px solid var(--line);
+      background: var(--white);
+      overflow: hidden;
+      animation: panel-in 260ms cubic-bezier(0.22, 0.8, 0.3, 1) both;
+    }
+
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .detail-empty {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
-      min-height: 420px;
-      padding: 40px 32px;
+      min-height: 380px;
+      gap: 14px;
     }
 
-    .empty-stamp {
+    .empty-mark {
       display: grid;
       place-items: center;
-      width: 58px;
-      height: 58px;
-      margin-bottom: 20px;
+      width: 62px;
+      height: 62px;
       border: 1px dashed var(--line-strong);
       border-radius: 50%;
       color: var(--pine);
       font-family: var(--serif);
-      font-size: 24px;
-    }
-
-    .detail-empty h2 {
-      margin: 0;
-      font-family: var(--serif);
-      font-size: 24px;
-      font-weight: 500;
+      font-size: 25px;
+      transform: rotate(-4deg);
     }
 
     .detail-empty p {
-      max-width: 34ch;
-      margin: 10px 0 0;
+      margin: 0;
       color: var(--muted);
-      font-size: 12px;
-      line-height: 1.7;
+      font-family: var(--serif);
+      font-size: 18px;
     }
 
-    .detail-content { padding: 22px 24px 24px; }
+    .detail-content { padding: 20px 24px 24px; }
 
     .detail-top {
       display: flex;
@@ -411,107 +351,80 @@
       margin-bottom: 14px;
     }
 
-    .detail-id {
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 10px;
-      margin-left: auto;
-    }
+    .detail-top .row-time { font-size: 10px; }
 
     .detail-query {
       margin: 0;
       font-family: var(--serif);
-      font-size: 24px;
+      font-size: 25px;
       font-weight: 500;
       line-height: 1.35;
     }
 
     .detail-rewrite {
-      margin: 9px 0 0;
+      margin: 8px 0 0;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       line-height: 1.6;
+    }
+
+    .detail-rewrite::before {
+      content: "↳ ";
+      color: var(--signal);
     }
 
     .detail-rewrite[hidden] { display: none; }
 
-    .detail-meta {
-      display: flex;
-      gap: 0;
-      margin: 20px 0 18px;
-      padding: 12px 0;
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-    }
-
-    .detail-meta div {
-      flex: 1;
-      padding-left: 16px;
-      border-left: 1px solid var(--line);
-    }
-
-    .detail-meta div:first-child { padding-left: 0; border-left: 0; }
-
-    .detail-meta dt { color: var(--muted); font-size: 10px; }
-
-    .detail-meta dd {
-      margin: 3px 0 0;
-      font-family: var(--mono);
-      font-size: 13px;
-    }
-
     .original {
-      margin: 0 0 16px;
+      margin: 18px 0 16px;
       color: var(--muted);
       font-size: 11px;
     }
 
     .original summary { cursor: pointer; }
+
     .original p {
       margin: 8px 0 0;
-      padding: 9px 10px;
+      padding: 10px;
       border-left: 2px solid var(--line);
       background: #f7f8f4;
       line-height: 1.65;
       white-space: pre-wrap;
     }
 
-    .answer-label {
-      display: block;
-      margin-bottom: 7px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
     #answerInput {
       display: block;
       width: 100%;
-      min-height: 126px;
-      padding: 10px 11px;
+      min-height: 130px;
+      padding: 11px 12px;
       border: 1px solid var(--line-strong);
       border-radius: 4px;
       outline: 0;
       resize: vertical;
       background: #fff;
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.65;
     }
 
     #answerInput:focus { border-color: var(--pine); }
+    #answerInput::placeholder { color: #8c9790; }
 
     .detail-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-top: 13px;
+      gap: 9px;
+      margin-top: 12px;
     }
 
     .btn {
-      padding: 9px 13px;
+      padding: 9px 15px;
       border-radius: 3px;
       font-size: 12px;
       cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease;
     }
+
+    .btn:active { transform: scale(0.97); }
 
     .btn-primary {
       border: 1px solid var(--pine-dark);
@@ -531,11 +444,30 @@
 
     .btn-quiet:hover { border-color: var(--muted); color: var(--ink); }
 
-    .detail-note {
-      margin: 12px 0 0;
-      color: #8c9790;
-      font-size: 10px;
-      line-height: 1.6;
+    .adopt-stamp {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(251, 251, 247, 0.93);
+      color: var(--pine);
+      font-family: var(--serif);
+      font-size: 46px;
+      letter-spacing: 0.08em;
+      opacity: 0;
+      pointer-events: none;
+      transform: rotate(-5deg) scale(0.75);
+    }
+
+    .adopt-stamp.is-visible {
+      animation: big-stamp 900ms cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+    }
+
+    @keyframes big-stamp {
+      0% { opacity: 0; transform: rotate(-5deg) scale(1.25); }
+      25% { opacity: 1; transform: rotate(-5deg) scale(1); }
+      75% { opacity: 1; transform: rotate(-5deg) scale(1); }
+      100% { opacity: 0; transform: rotate(-5deg) scale(1.02); }
     }
 
     .skeleton-row {
@@ -561,27 +493,28 @@
     }
 
     .list-empty, .list-error {
-      padding: 50px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 260px;
+      gap: 14px;
+      padding: 30px;
+    }
+
+    .list-empty .empty-mark { border-style: solid; }
+
+    .list-empty p, .list-error p {
+      margin: 0;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: 18px;
       text-align: center;
     }
 
-    .list-empty h3, .list-error h3 {
-      margin: 0;
-      font-family: var(--serif);
-      font-size: 24px;
-      font-weight: 500;
-    }
-
-    .list-empty p, .list-error p {
-      margin: 9px auto 0;
-      max-width: 42ch;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.7;
-    }
+    .list-error p { font-family: var(--sans); font-size: 12px; }
 
     .list-error button {
-      margin-top: 14px;
       padding: 7px 13px;
       border: 1px solid var(--line-strong);
       border-radius: 3px;
@@ -608,32 +541,27 @@
 
     .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 
-    @media (max-width: 1040px) {
+    @media (max-width: 900px) {
       .workspace { grid-template-columns: 1fr; }
       .detail { position: static; }
-      .intro { grid-template-columns: 1fr; align-items: start; gap: 24px; }
-      .stats div:first-child { padding-left: 0; }
     }
 
-    @media (max-width: 760px) {
+    @media (max-width: 640px) {
       body { background-image: none; }
       .masthead-inner, .page { width: calc(100vw - 32px); }
-      .masthead-meta, .brand-text em { display: none; }
-      .page { padding-top: 26px; }
-      .intro h1 { font-size: 34px; }
-      .stats { width: 100%; }
-      .stats div { flex: 1; min-width: 0; padding: 0 12px; }
-      .stats dd { font-size: 30px; }
+      .brand em { display: none; }
+      .page { padding-top: 22px; }
+      .page-head h1 { font-size: 32px; }
+      .count { min-width: 46px; height: 46px; font-size: 22px; }
       .toolbar { flex-wrap: wrap; }
       .search { order: 3; flex-basis: 100%; }
-      .detail-content, .detail-empty { padding-left: 18px; padding-right: 18px; }
+      .detail-content { padding: 18px; }
+      .detail-query { font-size: 22px; }
     }
 
-    @media (max-width: 480px) {
-      .masthead-nav a { font-size: 0; }
-      .masthead-nav a::after { content: "买家端"; font-size: 12px; }
+    @media (max-width: 420px) {
       .tabs { gap: 0; }
-      .tab { padding-left: 5px; padding-right: 5px; }
+      .tab { padding-left: 4px; padding-right: 4px; }
       .tab span { display: none; }
     }
 
@@ -650,34 +578,24 @@
     <div class="masthead-inner">
       <a class="brand" href="/chat">
         <span class="brand-mark" aria-hidden="true">S</span>
-        <span class="brand-text">SureDesk<em>运营审核台</em></span>
+        SureDesk<em>审核台</em>
       </a>
-      <nav class="masthead-nav" aria-label="页面导航">
-        <a href="/chat">买家对话端</a>
-        <span class="masthead-meta">数据飞轮 / 队列 03</span>
-      </nav>
+      <a class="back" href="/chat">买家端</a>
     </div>
   </header>
 
   <main class="page">
-    <section class="intro">
-      <div>
-        <h1>没答上的问题，<br>在这里变成标准答案。</h1>
-        <p>低置信度拦截和用户负反馈在这里汇合。补全答案并通过审核后，内容会立即写入知识库，下一次相同提问就能命中。</p>
-      </div>
-      <dl class="stats">
-        <div><dt>待审核</dt><dd id="statPending">—</dd></div>
-        <div><dt>置信度拦截</dt><dd id="statGate">—</dd></div>
-        <div><dt>用户负反馈</dt><dd id="statThumb">—</dd></div>
-      </dl>
-    </section>
+    <div class="page-head">
+      <h1>审核队列</h1>
+      <div class="count" id="statPending" aria-label="待审核数量">—</div>
+    </div>
 
     <section class="workspace">
-      <div class="queue-panel">
+      <div class="queue">
         <div class="toolbar">
-          <div class="tabs" role="tablist" aria-label="按来源筛选">
+          <div class="tabs" role="tablist" aria-label="筛选">
             <button class="tab is-active" data-filter="ALL" role="tab" aria-selected="true">全部 <span id="tabAllCount">—</span></button>
-            <button class="tab" data-filter="CONFIDENCE_GATE" role="tab" aria-selected="false">置信度拦截 <span id="tabGateCount">—</span></button>
+            <button class="tab" data-filter="CONFIDENCE_GATE" role="tab" aria-selected="false">拦截 <span id="tabGateCount">—</span></button>
             <button class="tab" data-filter="USER_THUMBS_DOWN" role="tab" aria-selected="false">负反馈 <span id="tabThumbCount">—</span></button>
           </div>
           <label class="search">
@@ -685,13 +603,12 @@
               <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.3"/>
               <path d="m10.4 10.4 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
-            <input id="searchInput" type="search" placeholder="搜索问题" aria-label="搜索问题">
+            <input id="searchInput" type="search" placeholder="搜索" aria-label="搜索">
           </label>
-          <button class="refresh" id="refreshBtn">
+          <button class="refresh" id="refreshBtn" aria-label="刷新">
             <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.8V6h-3.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            刷新
           </button>
         </div>
 
@@ -704,34 +621,29 @@
 
       <aside class="detail" id="detailPanel" aria-label="审核详情">
         <div class="detail-empty" id="detailEmpty">
-          <div class="empty-stamp" aria-hidden="true">审</div>
-          <h2>从左侧选择一条问题</h2>
-          <p>查看改写后的问题、出现频次和系统原始回答，再补全标准答案。</p>
+          <div class="empty-mark" aria-hidden="true">待</div>
+          <p>未选择</p>
         </div>
 
         <div class="detail-content" id="detailContent" hidden>
           <div class="detail-top">
             <span class="badge" id="detailBadge"></span>
-            <span class="detail-id" id="detailId"></span>
+            <span class="row-time" id="detailTime"></span>
           </div>
           <h2 class="detail-query" id="detailQuery"></h2>
           <p class="detail-rewrite" id="detailRewrite"></p>
-          <dl class="detail-meta">
-            <div><dt>出现频次</dt><dd id="detailFrequency">1 次</dd></div>
-            <div><dt>关联会话</dt><dd id="detailSessions">1 个</dd></div>
-          </dl>
           <details class="original" id="originalBlock">
-            <summary>查看系统原始回答</summary>
+            <summary>原始回答</summary>
             <p id="detailAnswer"></p>
           </details>
-          <label class="answer-label" for="answerInput">标准答案</label>
-          <textarea id="answerInput" rows="6" placeholder="用买家能看懂的语言写清楚规则、条件和下一步。"></textarea>
+          <textarea id="answerInput" rows="6" placeholder="标准答案" aria-label="标准答案"></textarea>
           <div class="detail-actions">
-            <button class="btn btn-primary" id="adoptBtn">采纳并写入知识库</button>
+            <button class="btn btn-primary" id="adoptBtn">采纳</button>
             <button class="btn btn-quiet" id="ignoreBtn">忽略</button>
           </div>
-          <p class="detail-note">采纳后会立即向量化，并进入共享知识检索索引。</p>
         </div>
+
+        <div class="adopt-stamp" id="adoptStamp" aria-hidden="true">已入库</div>
       </aside>
     </section>
   </main>
@@ -746,16 +658,15 @@
     const detailEmpty = document.getElementById("detailEmpty");
     const detailContent = document.getElementById("detailContent");
     const detailBadge = document.getElementById("detailBadge");
-    const detailId = document.getElementById("detailId");
+    const detailTime = document.getElementById("detailTime");
     const detailQuery = document.getElementById("detailQuery");
     const detailRewrite = document.getElementById("detailRewrite");
-    const detailFrequency = document.getElementById("detailFrequency");
-    const detailSessions = document.getElementById("detailSessions");
     const originalBlock = document.getElementById("originalBlock");
     const detailAnswer = document.getElementById("detailAnswer");
     const answerInput = document.getElementById("answerInput");
     const adoptBtn = document.getElementById("adoptBtn");
     const ignoreBtn = document.getElementById("ignoreBtn");
+    const adoptStamp = document.getElementById("adoptStamp");
 
     const state = {
       problems: [],
@@ -779,13 +690,13 @@
       toastEl.textContent = message;
       toastEl.classList.add("is-visible");
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toastEl.classList.remove("is-visible"), 3400);
+      toastTimer = setTimeout(() => toastEl.classList.remove("is-visible"), 3000);
     }
 
     function triggerLabel(type) {
       if (type === "CONFIDENCE_GATE") return "置信度拦截";
       if (type === "USER_THUMBS_DOWN") return "用户负反馈";
-      if (type === "SELF_EVAL_FAIL") return "生成自评未过";
+      if (type === "SELF_EVAL_FAIL") return "自评未过";
       return "待分类";
     }
 
@@ -809,13 +720,12 @@
       return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
     }
 
-    function updateStats() {
+    function updateCounts() {
       const total = state.problems.length;
       const gate = state.problems.filter(p => p.trigger_type === "CONFIDENCE_GATE").length;
       const thumb = state.problems.filter(p => p.trigger_type === "USER_THUMBS_DOWN").length;
       document.getElementById("statPending").textContent = total;
-      document.getElementById("statGate").textContent = gate;
-      document.getElementById("statThumb").textContent = thumb;
+      document.getElementById("statPending").setAttribute("aria-label", total + " 条待审核");
       document.getElementById("tabAllCount").textContent = total;
       document.getElementById("tabGateCount").textContent = gate;
       document.getElementById("tabThumbCount").textContent = thumb;
@@ -839,14 +749,11 @@
       listEl.replaceChildren();
       const box = document.createElement("div");
       box.className = "list-error";
-      const title = document.createElement("h3");
-      title.textContent = "队列暂时没有打开";
       const copy = document.createElement("p");
       copy.textContent = message;
       const retry = document.createElement("button");
-      retry.textContent = "重新加载";
+      retry.textContent = "重试";
       retry.addEventListener("click", loadProblems);
-      box.appendChild(title);
       box.appendChild(copy);
       box.appendChild(retry);
       listEl.appendChild(box);
@@ -865,13 +772,13 @@
       if (filtered.length === 0) {
         const box = document.createElement("div");
         box.className = "list-empty";
-        const title = document.createElement("h3");
-        title.textContent = state.problems.length === 0 ? "队列已经清空" : "没有匹配的问题";
+        const mark = document.createElement("div");
+        mark.className = "empty-mark";
+        mark.setAttribute("aria-hidden", "true");
+        mark.textContent = "空";
         const copy = document.createElement("p");
-        copy.textContent = state.problems.length === 0
-          ? "新的低置信度问题和用户负反馈会自动出现在这里。"
-          : "换一个关键词，或切换到其他来源看看。";
-        box.appendChild(title);
+        copy.textContent = state.problems.length === 0 ? "队列空了" : "没有匹配";
+        box.appendChild(mark);
         box.appendChild(copy);
         listEl.appendChild(box);
         return;
@@ -887,11 +794,6 @@
         top.className = "row-top";
         top.appendChild(makeBadge(problem.trigger_type));
 
-        const id = document.createElement("span");
-        id.className = "row-id";
-        id.textContent = "#" + String(problem.id || "").slice(0, 8);
-        top.appendChild(id);
-
         const time = document.createElement("span");
         time.className = "row-time";
         time.textContent = formatTime(problem.created_at);
@@ -899,27 +801,10 @@
 
         const question = document.createElement("p");
         question.className = "row-query";
-        question.textContent = problem.query || "（未记录问题内容）";
+        question.textContent = problem.query || "未记录";
 
         row.appendChild(top);
         row.appendChild(question);
-
-        if (problem.rewritten_query) {
-          const rewritten = document.createElement("p");
-          rewritten.className = "row-rewrite";
-          rewritten.textContent = "改写 · " + problem.rewritten_query;
-          row.appendChild(rewritten);
-        }
-
-        const foot = document.createElement("div");
-        foot.className = "row-foot";
-        const frequency = document.createElement("span");
-        frequency.textContent = "出现 " + String(problem.frequency || 1) + " 次";
-        const status = document.createElement("span");
-        status.textContent = "待审核";
-        foot.appendChild(frequency);
-        foot.appendChild(status);
-        row.appendChild(foot);
 
         row.addEventListener("click", () => selectProblem(problem.id));
         listEl.appendChild(row);
@@ -932,20 +817,16 @@
 
       detailBadge.className = "badge " + triggerClass(problem.trigger_type);
       detailBadge.textContent = triggerLabel(problem.trigger_type);
-      detailId.textContent = "#" + String(problem.id || "").slice(0, 12);
-      detailQuery.textContent = problem.query || "（未记录问题内容）";
+      detailTime.textContent = formatTime(problem.created_at);
+      detailQuery.textContent = problem.query || "未记录";
 
       if (problem.rewritten_query) {
         detailRewrite.hidden = false;
-        detailRewrite.textContent = "改写后 · " + problem.rewritten_query;
+        detailRewrite.textContent = problem.rewritten_query;
       } else {
         detailRewrite.hidden = true;
         detailRewrite.textContent = "";
       }
-
-      detailFrequency.textContent = String(problem.frequency || 1) + " 次";
-      const sessions = Array.isArray(problem.sessions) ? problem.sessions.length : 1;
-      detailSessions.textContent = String(sessions) + " 个";
 
       if (problem.answer) {
         originalBlock.hidden = false;
@@ -980,9 +861,9 @@
 
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
-            throw new Error("需要运营角色令牌。请在浏览器控制台写入 suredesk_access_token 后刷新。");
+            throw new Error("需要运营角色令牌");
           }
-          throw new Error("服务返回 HTTP " + res.status + "，请稍后重试。");
+          throw new Error("加载失败 " + res.status);
         }
 
         const data = await res.json();
@@ -993,7 +874,7 @@
           state.selectedId = state.problems.length > 0 ? state.problems[0].id : null;
         }
 
-        updateStats();
+        updateCounts();
         renderList();
 
         if (state.selectedId) {
@@ -1004,7 +885,7 @@
           detailContent.hidden = true;
         }
       } catch (err) {
-        renderError(err && err.message ? err.message : "加载失败，请检查网络或认证配置后重试。");
+        renderError(err && err.message ? err.message : "加载失败");
       } finally {
         refreshBtn.classList.remove("is-loading");
         refreshBtn.disabled = false;
@@ -1014,49 +895,53 @@
     async function adoptProblem(id, textareaElement) {
       const answer = (textareaElement ? textareaElement.value : answerInput.value).trim();
       if (!answer) {
-        showToast("先写下标准答案，再提交采纳");
+        showToast("先写答案");
         answerInput.focus();
         return;
       }
 
       adoptBtn.disabled = true;
       try {
-        const headers = getAuthHeaders({ "Content-Type": "application/json" });
         const res = await fetch("/api/workbench/adopt", {
           method: "POST",
-          headers: headers,
+          headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ problem_id: id, standard_answer: answer })
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
 
+        adoptStamp.classList.remove("is-visible");
+        void adoptStamp.offsetWidth;
+        adoptStamp.classList.add("is-visible");
         delete drafts[id];
         state.selectedId = null;
-        showToast("已采纳，标准答案已写入知识库");
-        await loadProblems();
+        showToast("已采纳");
+        setTimeout(() => {
+          adoptStamp.classList.remove("is-visible");
+          loadProblems();
+        }, 850);
       } catch (err) {
         adoptBtn.disabled = false;
-        showToast("采纳提交失败，请重试");
+        showToast("提交失败");
       }
     }
 
     async function ignoreProblem(id) {
       ignoreBtn.disabled = true;
       try {
-        const headers = getAuthHeaders({ "Content-Type": "application/json" });
         const res = await fetch("/api/workbench/ignore", {
           method: "POST",
-          headers: headers,
+          headers: getAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ problem_id: id })
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
 
         delete drafts[id];
         state.selectedId = null;
-        showToast("已忽略这条问题");
-        await loadProblems();
+        showToast("已忽略");
+        loadProblems();
       } catch (err) {
         ignoreBtn.disabled = false;
-        showToast("忽略操作失败，请重试");
+        showToast("操作失败");
       }
     }
 
