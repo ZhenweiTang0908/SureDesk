@@ -2,48 +2,770 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>SureDesk - 运营审核工作台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SureDesk · 运营审核台</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 24px; }
-    .container { max-width: 1100px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-    h2 { margin-top: 0; color: #1f1f1f; display: flex; justify-content: space-between; align-items: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
-    th, td { border: 1px solid #f0f0f0; padding: 12px 14px; text-align: left; }
-    th { background: #fafafa; font-weight: 600; color: #595959; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
-    .badge-gate { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
-    .badge-thumb { background: #fffbe6; color: #d48806; border: 1px solid #ffe58f; }
-    .btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }
-    .btn-primary { background: #1890ff; color: #fff; }
-    .btn-default { background: #f5f5f5; color: #595959; border: 1px solid #d9d9d9; margin-left: 6px; }
-    textarea { width: 100%; box-sizing: border-box; border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px; font-size: 13px; }
+    :root {
+      color-scheme: light;
+      --canvas: #e9ede6;
+      --surface: #fbfbf7;
+      --surface-raised: #ffffff;
+      --ink: #17211c;
+      --muted: #64716a;
+      --line: #d3dbd1;
+      --line-strong: #bcc7ba;
+      --pine: #1c4a3b;
+      --pine-dark: #123126;
+      --pine-soft: #e4ece6;
+      --signal: #cf4a2f;
+      --signal-soft: #f7e5df;
+      --amber: #a86f1b;
+      --amber-soft: #f6ecd8;
+      --serif: "Iowan Old Style", "Palatino Linotype", "Songti SC", "Noto Serif CJK SC", serif;
+      --sans: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", sans-serif;
+      --mono: "SF Mono", "Menlo", "Consolas", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--sans);
+      background-color: var(--canvas);
+      background-image:
+        linear-gradient(rgba(23, 33, 28, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23, 33, 28, 0.035) 1px, transparent 1px);
+      background-size: 34px 34px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, textarea, input { font: inherit; color: inherit; }
+
+    :focus-visible {
+      outline: 2px solid var(--signal);
+      outline-offset: 3px;
+    }
+
+    .masthead {
+      color: #f3f6f1;
+      background-color: var(--pine);
+      background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      background-size: 18px 18px;
+      border-bottom: 4px solid var(--signal);
+    }
+
+    .masthead-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      width: min(1260px, calc(100vw - 48px));
+      margin: 0 auto;
+      padding: 17px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid rgba(255, 255, 255, 0.7);
+      color: #fff;
+      font-family: var(--serif);
+      font-size: 19px;
+      line-height: 1;
+      transform: rotate(-3deg);
+      box-shadow: inset 0 0 0 3px var(--pine), inset 0 0 0 4px rgba(255, 255, 255, 0.26);
+    }
+
+    .brand-text {
+      font-family: var(--serif);
+      font-size: 21px;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-text em {
+      margin-left: 8px;
+      color: rgba(243, 246, 241, 0.62);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-style: normal;
+      letter-spacing: 0.12em;
+    }
+
+    .masthead-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+    }
+
+    .masthead-nav a {
+      color: #f3f6f1;
+      text-decoration-color: rgba(255, 255, 255, 0.45);
+      text-underline-offset: 4px;
+    }
+
+    .masthead-meta {
+      color: rgba(243, 246, 241, 0.5);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    .page {
+      width: min(1260px, calc(100vw - 48px));
+      margin: 0 auto;
+      padding: 40px 0 48px;
+    }
+
+    .intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 44px;
+      align-items: end;
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .intro h1 {
+      max-width: 18ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(36px, 4.2vw, 54px);
+      font-weight: 500;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+    }
+
+    .intro p {
+      max-width: 62ch;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    .stats {
+      display: flex;
+      gap: 0;
+      margin: 0;
+    }
+
+    .stats div {
+      min-width: 108px;
+      padding: 0 20px;
+      border-left: 1px solid var(--line-strong);
+    }
+
+    .stats div:first-child { padding-left: 0; border-left: 0; }
+    .stats div:last-child { padding-right: 0; }
+
+    .stats dt {
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .stats dd {
+      margin: 4px 0 0;
+      font-family: var(--serif);
+      font-size: 38px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.9fr);
+      gap: 20px;
+      margin-top: 24px;
+      align-items: start;
+    }
+
+    .queue-panel,
+    .detail {
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .queue-panel { min-width: 0; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-raised);
+    }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 7px 9px 6px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: none;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .tab span {
+      margin-left: 3px;
+      color: #8a958e;
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    .tab:hover { color: var(--ink); }
+    .tab.is-active { border-bottom-color: var(--signal); color: var(--ink); }
+
+    .search {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 7px;
+      min-width: 120px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: #fff;
+    }
+
+    .search svg { flex: 0 0 13px; width: 13px; height: 13px; color: var(--muted); }
+
+    .search input {
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font-size: 12px;
+    }
+
+    .search input::placeholder { color: #8c9790; }
+
+    .refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 3px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .refresh svg { width: 13px; height: 13px; }
+    .refresh:hover { border-color: var(--pine); }
+    .refresh.is-loading svg { animation: spin 900ms linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .problem-list { min-height: 280px; }
+
+    .problem-row {
+      display: block;
+      width: 100%;
+      padding: 16px 18px 15px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      border-left: 3px solid transparent;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .problem-row:last-child { border-bottom: 0; }
+    .problem-row:hover { background: #f5f8f3; }
+
+    .problem-row.is-selected {
+      border-left-color: var(--signal);
+      background: var(--pine-soft);
+    }
+
+    .row-top {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 8px;
+    }
+
+    .row-id, .row-time {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+
+    .row-time { margin-left: auto; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border: 1px solid;
+      border-radius: 2px;
+      font-size: 10px;
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+
+    .badge.gate { border-color: #e2b6a9; background: var(--signal-soft); color: #9c3521; }
+    .badge.thumb { border-color: #dfc492; background: var(--amber-soft); color: #7e5414; }
+    .badge.self { border-color: #b9cbbd; background: var(--pine-soft); color: var(--pine); }
+
+    .row-query {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    .row-rewrite {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .row-foot {
+      display: flex;
+      gap: 14px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .row-foot span:last-child { margin-left: auto; color: var(--pine); }
+
+    .detail {
+      position: sticky;
+      top: 20px;
+      min-height: 420px;
+      background: var(--surface-raised);
+    }
+
+    .detail-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      min-height: 420px;
+      padding: 40px 32px;
+    }
+
+    .empty-stamp {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      margin-bottom: 20px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 50%;
+      color: var(--pine);
+      font-family: var(--serif);
+      font-size: 24px;
+    }
+
+    .detail-empty h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .detail-empty p {
+      max-width: 34ch;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .detail-content { padding: 22px 24px 24px; }
+
+    .detail-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .detail-id {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      margin-left: auto;
+    }
+
+    .detail-query {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .detail-rewrite {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .detail-rewrite[hidden] { display: none; }
+
+    .detail-meta {
+      display: flex;
+      gap: 0;
+      margin: 20px 0 18px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .detail-meta div {
+      flex: 1;
+      padding-left: 16px;
+      border-left: 1px solid var(--line);
+    }
+
+    .detail-meta div:first-child { padding-left: 0; border-left: 0; }
+
+    .detail-meta dt { color: var(--muted); font-size: 10px; }
+
+    .detail-meta dd {
+      margin: 3px 0 0;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .original {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .original summary { cursor: pointer; }
+    .original p {
+      margin: 8px 0 0;
+      padding: 9px 10px;
+      border-left: 2px solid var(--line);
+      background: #f7f8f4;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .answer-label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    #answerInput {
+      display: block;
+      width: 100%;
+      min-height: 126px;
+      padding: 10px 11px;
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      outline: 0;
+      resize: vertical;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    #answerInput:focus { border-color: var(--pine); }
+
+    .detail-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 13px;
+    }
+
+    .btn {
+      padding: 9px 13px;
+      border-radius: 3px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      border: 1px solid var(--pine-dark);
+      background: var(--pine);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover { background: var(--pine-dark); }
+    .btn-primary:disabled { opacity: 0.55; cursor: progress; }
+
+    .btn-quiet {
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .btn-quiet:hover { border-color: var(--muted); color: var(--ink); }
+
+    .detail-note {
+      margin: 12px 0 0;
+      color: #8c9790;
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .skeleton-row {
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sk {
+      display: block;
+      height: 10px;
+      margin-bottom: 9px;
+      background: #edf0ea;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+
+    .sk-sm { width: 22%; }
+    .sk-md { width: 72%; }
+    .sk-lg { width: 90%; }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+
+    .list-empty, .list-error {
+      padding: 50px 30px;
+      text-align: center;
+    }
+
+    .list-empty h3, .list-error h3 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .list-empty p, .list-error p {
+      margin: 9px auto 0;
+      max-width: 42ch;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .list-error button {
+      margin-top: 14px;
+      padding: 7px 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: 3px;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 26px;
+      left: 50%;
+      z-index: 20;
+      padding: 10px 16px;
+      border-radius: 6px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 8px);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 1040px) {
+      .workspace { grid-template-columns: 1fr; }
+      .detail { position: static; }
+      .intro { grid-template-columns: 1fr; align-items: start; gap: 24px; }
+      .stats div:first-child { padding-left: 0; }
+    }
+
+    @media (max-width: 760px) {
+      body { background-image: none; }
+      .masthead-inner, .page { width: calc(100vw - 32px); }
+      .masthead-meta, .brand-text em { display: none; }
+      .page { padding-top: 26px; }
+      .intro h1 { font-size: 34px; }
+      .stats { width: 100%; }
+      .stats div { flex: 1; min-width: 0; padding: 0 12px; }
+      .stats dd { font-size: 30px; }
+      .toolbar { flex-wrap: wrap; }
+      .search { order: 3; flex-basis: 100%; }
+      .detail-content, .detail-empty { padding-left: 18px; padding-right: 18px; }
+    }
+
+    @media (max-width: 480px) {
+      .masthead-nav a { font-size: 0; }
+      .masthead-nav a::after { content: "买家端"; font-size: 12px; }
+      .tabs { gap: 0; }
+      .tab { padding-left: 5px; padding-right: 5px; }
+      .tab span { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>
-      <span>低置信度与负反馈问题池 (Data Flywheel)</span>
-      <button class="btn btn-default" id="refreshBtn">🔄 刷新列表</button>
-    </h2>
-    <table id="problemTable">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>触发原因</th>
-          <th>提问内容</th>
-          <th>频次</th>
-          <th>标准答案补全与采纳</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="6" style="text-align:center;color:#8c8c8c;">正在加载中...</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="brand" href="/chat">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span class="brand-text">SureDesk<em>运营审核台</em></span>
+      </a>
+      <nav class="masthead-nav" aria-label="页面导航">
+        <a href="/chat">买家对话端</a>
+        <span class="masthead-meta">数据飞轮 / 队列 03</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <div>
+        <h1>没答上的问题，<br>在这里变成标准答案。</h1>
+        <p>低置信度拦截和用户负反馈在这里汇合。补全答案并通过审核后，内容会立即写入知识库，下一次相同提问就能命中。</p>
+      </div>
+      <dl class="stats">
+        <div><dt>待审核</dt><dd id="statPending">—</dd></div>
+        <div><dt>置信度拦截</dt><dd id="statGate">—</dd></div>
+        <div><dt>用户负反馈</dt><dd id="statThumb">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="workspace">
+      <div class="queue-panel">
+        <div class="toolbar">
+          <div class="tabs" role="tablist" aria-label="按来源筛选">
+            <button class="tab is-active" data-filter="ALL" role="tab" aria-selected="true">全部 <span id="tabAllCount">—</span></button>
+            <button class="tab" data-filter="CONFIDENCE_GATE" role="tab" aria-selected="false">置信度拦截 <span id="tabGateCount">—</span></button>
+            <button class="tab" data-filter="USER_THUMBS_DOWN" role="tab" aria-selected="false">负反馈 <span id="tabThumbCount">—</span></button>
+          </div>
+          <label class="search">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.3"/>
+              <path d="m10.4 10.4 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <input id="searchInput" type="search" placeholder="搜索问题" aria-label="搜索问题">
+          </label>
+          <button class="refresh" id="refreshBtn">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.8V6h-3.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            刷新
+          </button>
+        </div>
+
+        <div class="problem-list" id="problemList">
+          <div class="skeleton-row"><span class="sk sk-sm"></span><span class="sk sk-lg"></span><span class="sk sk-md"></span></div>
+          <div class="skeleton-row"><span class="sk sk-sm"></span><span class="sk sk-lg"></span><span class="sk sk-md"></span></div>
+          <div class="skeleton-row"><span class="sk sk-sm"></span><span class="sk sk-lg"></span><span class="sk sk-md"></span></div>
+        </div>
+      </div>
+
+      <aside class="detail" id="detailPanel" aria-label="审核详情">
+        <div class="detail-empty" id="detailEmpty">
+          <div class="empty-stamp" aria-hidden="true">审</div>
+          <h2>从左侧选择一条问题</h2>
+          <p>查看改写后的问题、出现频次和系统原始回答，再补全标准答案。</p>
+        </div>
+
+        <div class="detail-content" id="detailContent" hidden>
+          <div class="detail-top">
+            <span class="badge" id="detailBadge"></span>
+            <span class="detail-id" id="detailId"></span>
+          </div>
+          <h2 class="detail-query" id="detailQuery"></h2>
+          <p class="detail-rewrite" id="detailRewrite"></p>
+          <dl class="detail-meta">
+            <div><dt>出现频次</dt><dd id="detailFrequency">1 次</dd></div>
+            <div><dt>关联会话</dt><dd id="detailSessions">1 个</dd></div>
+          </dl>
+          <details class="original" id="originalBlock">
+            <summary>查看系统原始回答</summary>
+            <p id="detailAnswer"></p>
+          </details>
+          <label class="answer-label" for="answerInput">标准答案</label>
+          <textarea id="answerInput" rows="6" placeholder="用买家能看懂的语言写清楚规则、条件和下一步。"></textarea>
+          <div class="detail-actions">
+            <button class="btn btn-primary" id="adoptBtn">采纳并写入知识库</button>
+            <button class="btn btn-quiet" id="ignoreBtn">忽略</button>
+          </div>
+          <p class="detail-note">采纳后会立即向量化，并进入共享知识检索索引。</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    // Read access token from localStorage and attach Authorization header
+    const listEl = document.getElementById("problemList");
+    const searchInput = document.getElementById("searchInput");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const toastEl = document.getElementById("toast");
+    const detailEmpty = document.getElementById("detailEmpty");
+    const detailContent = document.getElementById("detailContent");
+    const detailBadge = document.getElementById("detailBadge");
+    const detailId = document.getElementById("detailId");
+    const detailQuery = document.getElementById("detailQuery");
+    const detailRewrite = document.getElementById("detailRewrite");
+    const detailFrequency = document.getElementById("detailFrequency");
+    const detailSessions = document.getElementById("detailSessions");
+    const originalBlock = document.getElementById("originalBlock");
+    const detailAnswer = document.getElementById("detailAnswer");
+    const answerInput = document.getElementById("answerInput");
+    const adoptBtn = document.getElementById("adoptBtn");
+    const ignoreBtn = document.getElementById("ignoreBtn");
+
+    const state = {
+      problems: [],
+      filter: "ALL",
+      search: "",
+      selectedId: null
+    };
+    const drafts = {};
+    let toastTimer = null;
+
     function getAuthHeaders(customHeaders = {}) {
       const headers = Object.assign({}, customHeaders);
       const token = localStorage.getItem("suredesk_access_token");
@@ -53,134 +775,251 @@
       return headers;
     }
 
-    // Fetch pending problems and render table rows using DOM methods to prevent XSS
-    async function loadProblems() {
-      const tbody = document.getElementById("tbody");
-      tbody.replaceChildren();
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("is-visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("is-visible"), 3400);
+    }
 
-      const loadingTr = document.createElement("tr");
-      const loadingTd = document.createElement("td");
-      loadingTd.colSpan = 6;
-      loadingTd.style.textAlign = "center";
-      loadingTd.style.color = "#8c8c8c";
-      loadingTd.textContent = "正在加载中...";
-      loadingTr.appendChild(loadingTd);
-      tbody.appendChild(loadingTr);
+    function triggerLabel(type) {
+      if (type === "CONFIDENCE_GATE") return "置信度拦截";
+      if (type === "USER_THUMBS_DOWN") return "用户负反馈";
+      if (type === "SELF_EVAL_FAIL") return "生成自评未过";
+      return "待分类";
+    }
 
-      try {
-        const headers = getAuthHeaders();
-        const res = await fetch("/api/workbench/problems?status=PENDING", {
-          headers: headers
+    function triggerClass(type) {
+      if (type === "CONFIDENCE_GATE") return "gate";
+      if (type === "USER_THUMBS_DOWN") return "thumb";
+      return "self";
+    }
+
+    function makeBadge(type) {
+      const badge = document.createElement("span");
+      badge.className = "badge " + triggerClass(type);
+      badge.textContent = triggerLabel(type);
+      return badge;
+    }
+
+    function formatTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function updateStats() {
+      const total = state.problems.length;
+      const gate = state.problems.filter(p => p.trigger_type === "CONFIDENCE_GATE").length;
+      const thumb = state.problems.filter(p => p.trigger_type === "USER_THUMBS_DOWN").length;
+      document.getElementById("statPending").textContent = total;
+      document.getElementById("statGate").textContent = gate;
+      document.getElementById("statThumb").textContent = thumb;
+      document.getElementById("tabAllCount").textContent = total;
+      document.getElementById("tabGateCount").textContent = gate;
+      document.getElementById("tabThumbCount").textContent = thumb;
+    }
+
+    function renderSkeletons() {
+      listEl.replaceChildren();
+      for (let i = 0; i < 4; i += 1) {
+        const row = document.createElement("div");
+        row.className = "skeleton-row";
+        ["sk-sm", "sk-lg", "sk-md"].forEach((size) => {
+          const line = document.createElement("span");
+          line.className = "sk " + size;
+          row.appendChild(line);
         });
-        if (!res.ok) {
-          throw new Error("HTTP " + res.status);
-        }
-        const data = await res.json();
-        tbody.replaceChildren();
-
-        if (!data.problems || data.problems.length === 0) {
-          const emptyTr = document.createElement("tr");
-          const emptyTd = document.createElement("td");
-          emptyTd.colSpan = 6;
-          emptyTd.style.textAlign = "center";
-          emptyTd.style.color = "#52c41a";
-          emptyTd.style.padding = "24px";
-          emptyTd.textContent = "🎉 当前暂无待审核问题，知识库运行良好！";
-          emptyTr.appendChild(emptyTd);
-          tbody.appendChild(emptyTr);
-          return;
-        }
-
-        for (const p of data.problems) {
-          const tr = document.createElement("tr");
-
-          // ID column
-          const tdId = document.createElement("td");
-          tdId.textContent = p.id || "";
-          tr.appendChild(tdId);
-
-          // Trigger badge column
-          const tdTrigger = document.createElement("td");
-          const badge = document.createElement("span");
-          badge.className = "badge " + (p.trigger_type === "CONFIDENCE_GATE" ? "badge-gate" : "badge-thumb");
-          badge.textContent = p.trigger_type || "UNKNOWN";
-          tdTrigger.appendChild(badge);
-          tr.appendChild(tdTrigger);
-
-          // Query and rewritten query column
-          const tdQuery = document.createElement("td");
-          const bQuery = document.createElement("b");
-          bQuery.textContent = p.query || "";
-          tdQuery.appendChild(bQuery);
-
-          if (p.rewritten_query) {
-            tdQuery.appendChild(document.createElement("br"));
-            const smallRewritten = document.createElement("small");
-            smallRewritten.style.color = "#8c8c8c";
-            smallRewritten.textContent = "改写: " + p.rewritten_query;
-            tdQuery.appendChild(smallRewritten);
-          }
-          tr.appendChild(tdQuery);
-
-          // Frequency column
-          const tdFreq = document.createElement("td");
-          const spanFreq = document.createElement("span");
-          spanFreq.style.fontWeight = "bold";
-          spanFreq.style.color = "#1890ff";
-          spanFreq.textContent = String(p.frequency !== undefined ? p.frequency : 1);
-          tdFreq.appendChild(spanFreq);
-          tr.appendChild(tdFreq);
-
-          // Standard answer textarea column
-          const tdAns = document.createElement("td");
-          const textarea = document.createElement("textarea");
-          textarea.id = "ans_" + p.id;
-          textarea.rows = 2;
-          textarea.placeholder = "在此输入官方标准解答...";
-          if (p.standard_answer) {
-            textarea.value = p.standard_answer;
-          }
-          tdAns.appendChild(textarea);
-          tr.appendChild(tdAns);
-
-          // Action buttons column
-          const tdActions = document.createElement("td");
-          const adoptBtn = document.createElement("button");
-          adoptBtn.className = "btn btn-primary";
-          adoptBtn.textContent = "采纳并入库";
-          adoptBtn.addEventListener("click", () => adoptProblem(p.id, textarea));
-
-          const ignoreBtn = document.createElement("button");
-          ignoreBtn.className = "btn btn-default";
-          ignoreBtn.textContent = "忽略";
-          ignoreBtn.addEventListener("click", () => ignoreProblem(p.id));
-
-          tdActions.appendChild(adoptBtn);
-          tdActions.appendChild(ignoreBtn);
-          tr.appendChild(tdActions);
-
-          tbody.appendChild(tr);
-        }
-      } catch (err) {
-        tbody.replaceChildren();
-        const errTr = document.createElement("tr");
-        const errTd = document.createElement("td");
-        errTd.colSpan = 6;
-        errTd.style.textAlign = "center";
-        errTd.style.color = "#cf1322";
-        errTd.textContent = "加载失败，请检查网络或认证配置后重试。";
-        errTr.appendChild(errTd);
-        tbody.appendChild(errTr);
+        listEl.appendChild(row);
       }
     }
 
-    // Adopt standard answer and sync knowledge base
-    async function adoptProblem(id, textareaElement) {
-      const answer = (textareaElement ? textareaElement.value : (document.getElementById("ans_" + id)?.value || "")).trim();
-      if (!answer) {
-        alert("请输入标准答案后再提交采纳！");
+    function renderError(message) {
+      listEl.replaceChildren();
+      const box = document.createElement("div");
+      box.className = "list-error";
+      const title = document.createElement("h3");
+      title.textContent = "队列暂时没有打开";
+      const copy = document.createElement("p");
+      copy.textContent = message;
+      const retry = document.createElement("button");
+      retry.textContent = "重新加载";
+      retry.addEventListener("click", loadProblems);
+      box.appendChild(title);
+      box.appendChild(copy);
+      box.appendChild(retry);
+      listEl.appendChild(box);
+    }
+
+    function renderList() {
+      const query = state.search.trim().toLowerCase();
+      const filtered = state.problems.filter((problem) => {
+        const matchesFilter = state.filter === "ALL" || problem.trigger_type === state.filter;
+        const haystack = ((problem.query || "") + " " + (problem.rewritten_query || "")).toLowerCase();
+        return matchesFilter && (!query || haystack.includes(query));
+      });
+
+      listEl.replaceChildren();
+
+      if (filtered.length === 0) {
+        const box = document.createElement("div");
+        box.className = "list-empty";
+        const title = document.createElement("h3");
+        title.textContent = state.problems.length === 0 ? "队列已经清空" : "没有匹配的问题";
+        const copy = document.createElement("p");
+        copy.textContent = state.problems.length === 0
+          ? "新的低置信度问题和用户负反馈会自动出现在这里。"
+          : "换一个关键词，或切换到其他来源看看。";
+        box.appendChild(title);
+        box.appendChild(copy);
+        listEl.appendChild(box);
         return;
       }
+
+      filtered.forEach((problem) => {
+        const row = document.createElement("button");
+        row.className = "problem-row" + (problem.id === state.selectedId ? " is-selected" : "");
+        row.type = "button";
+        row.setAttribute("aria-pressed", problem.id === state.selectedId ? "true" : "false");
+
+        const top = document.createElement("div");
+        top.className = "row-top";
+        top.appendChild(makeBadge(problem.trigger_type));
+
+        const id = document.createElement("span");
+        id.className = "row-id";
+        id.textContent = "#" + String(problem.id || "").slice(0, 8);
+        top.appendChild(id);
+
+        const time = document.createElement("span");
+        time.className = "row-time";
+        time.textContent = formatTime(problem.created_at);
+        top.appendChild(time);
+
+        const question = document.createElement("p");
+        question.className = "row-query";
+        question.textContent = problem.query || "（未记录问题内容）";
+
+        row.appendChild(top);
+        row.appendChild(question);
+
+        if (problem.rewritten_query) {
+          const rewritten = document.createElement("p");
+          rewritten.className = "row-rewrite";
+          rewritten.textContent = "改写 · " + problem.rewritten_query;
+          row.appendChild(rewritten);
+        }
+
+        const foot = document.createElement("div");
+        foot.className = "row-foot";
+        const frequency = document.createElement("span");
+        frequency.textContent = "出现 " + String(problem.frequency || 1) + " 次";
+        const status = document.createElement("span");
+        status.textContent = "待审核";
+        foot.appendChild(frequency);
+        foot.appendChild(status);
+        row.appendChild(foot);
+
+        row.addEventListener("click", () => selectProblem(problem.id));
+        listEl.appendChild(row);
+      });
+    }
+
+    function renderDetail(problem) {
+      detailEmpty.hidden = true;
+      detailContent.hidden = false;
+
+      detailBadge.className = "badge " + triggerClass(problem.trigger_type);
+      detailBadge.textContent = triggerLabel(problem.trigger_type);
+      detailId.textContent = "#" + String(problem.id || "").slice(0, 12);
+      detailQuery.textContent = problem.query || "（未记录问题内容）";
+
+      if (problem.rewritten_query) {
+        detailRewrite.hidden = false;
+        detailRewrite.textContent = "改写后 · " + problem.rewritten_query;
+      } else {
+        detailRewrite.hidden = true;
+        detailRewrite.textContent = "";
+      }
+
+      detailFrequency.textContent = String(problem.frequency || 1) + " 次";
+      const sessions = Array.isArray(problem.sessions) ? problem.sessions.length : 1;
+      detailSessions.textContent = String(sessions) + " 个";
+
+      if (problem.answer) {
+        originalBlock.hidden = false;
+        detailAnswer.textContent = problem.answer;
+      } else {
+        originalBlock.hidden = true;
+        detailAnswer.textContent = "";
+      }
+
+      const draft = drafts[problem.id];
+      answerInput.value = draft !== undefined ? draft : (problem.standard_answer || "");
+      adoptBtn.disabled = false;
+      ignoreBtn.disabled = false;
+    }
+
+    function selectProblem(id) {
+      state.selectedId = id;
+      renderList();
+      const problem = state.problems.find(item => item.id === id);
+      if (problem) renderDetail(problem);
+    }
+
+    async function loadProblems() {
+      refreshBtn.classList.add("is-loading");
+      refreshBtn.disabled = true;
+      renderSkeletons();
+
+      try {
+        const res = await fetch("/api/workbench/problems?status=PENDING", {
+          headers: getAuthHeaders()
+        });
+
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            throw new Error("需要运营角色令牌。请在浏览器控制台写入 suredesk_access_token 后刷新。");
+          }
+          throw new Error("服务返回 HTTP " + res.status + "，请稍后重试。");
+        }
+
+        const data = await res.json();
+        state.problems = Array.isArray(data.problems) ? data.problems : [];
+
+        const stillExists = state.problems.some(item => item.id === state.selectedId);
+        if (!stillExists) {
+          state.selectedId = state.problems.length > 0 ? state.problems[0].id : null;
+        }
+
+        updateStats();
+        renderList();
+
+        if (state.selectedId) {
+          const problem = state.problems.find(item => item.id === state.selectedId);
+          if (problem) renderDetail(problem);
+        } else {
+          detailEmpty.hidden = false;
+          detailContent.hidden = true;
+        }
+      } catch (err) {
+        renderError(err && err.message ? err.message : "加载失败，请检查网络或认证配置后重试。");
+      } finally {
+        refreshBtn.classList.remove("is-loading");
+        refreshBtn.disabled = false;
+      }
+    }
+
+    async function adoptProblem(id, textareaElement) {
+      const answer = (textareaElement ? textareaElement.value : answerInput.value).trim();
+      if (!answer) {
+        showToast("先写下标准答案，再提交采纳");
+        answerInput.focus();
+        return;
+      }
+
+      adoptBtn.disabled = true;
       try {
         const headers = getAuthHeaders({ "Content-Type": "application/json" });
         const res = await fetch("/api/workbench/adopt", {
@@ -188,18 +1027,20 @@
           headers: headers,
           body: JSON.stringify({ problem_id: id, standard_answer: answer })
         });
-        if (!res.ok) {
-          throw new Error("HTTP " + res.status);
-        }
-        alert("✅ 已成功采纳，并同步更新写入知识库与向量引擎！");
-        loadProblems();
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        delete drafts[id];
+        state.selectedId = null;
+        showToast("已采纳，标准答案已写入知识库");
+        await loadProblems();
       } catch (err) {
-        alert("采纳提交失败，请重试。");
+        adoptBtn.disabled = false;
+        showToast("采纳提交失败，请重试");
       }
     }
 
-    // Ignore problem from review pool
     async function ignoreProblem(id) {
+      ignoreBtn.disabled = true;
       try {
         const headers = getAuthHeaders({ "Content-Type": "application/json" });
         const res = await fetch("/api/workbench/ignore", {
@@ -207,18 +1048,51 @@
           headers: headers,
           body: JSON.stringify({ problem_id: id })
         });
-        if (!res.ok) {
-          throw new Error("HTTP " + res.status);
-        }
-        loadProblems();
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        delete drafts[id];
+        state.selectedId = null;
+        showToast("已忽略这条问题");
+        await loadProblems();
       } catch (err) {
-        alert("忽略操作失败，请重试。");
+        ignoreBtn.disabled = false;
+        showToast("忽略操作失败，请重试");
       }
     }
 
-    // Attach listener to refresh button and load initial problem list
-    document.getElementById("refreshBtn").addEventListener("click", loadProblems);
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        state.filter = tab.getAttribute("data-filter") || "ALL";
+        document.querySelectorAll(".tab").forEach((item) => {
+          const active = item === tab;
+          item.classList.toggle("is-active", active);
+          item.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        renderList();
+      });
+    });
+
+    searchInput.addEventListener("input", () => {
+      state.search = searchInput.value;
+      renderList();
+    });
+
+    refreshBtn.addEventListener("click", loadProblems);
+
+    answerInput.addEventListener("input", () => {
+      if (state.selectedId) drafts[state.selectedId] = answerInput.value;
+    });
+
+    adoptBtn.addEventListener("click", () => {
+      if (state.selectedId) adoptProblem(state.selectedId, answerInput);
+    });
+
+    ignoreBtn.addEventListener("click", () => {
+      if (state.selectedId) ignoreProblem(state.selectedId);
+    });
+
     loadProblems();
   </script>
 </body>
 </html>
+
