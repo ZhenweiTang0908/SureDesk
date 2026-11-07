@@ -1,124 +1,291 @@
 <div align="center">
 
-# SureDesk · 定策
+<sub>English · <a href="README.zh-CN.md">简体中文</a></sub>
 
-**生产级电商 AI 智能客服**
+# SureDesk
 
-有依据的回答，有边界的承诺，能回流的数据。
+**Production-grade e-commerce AI customer service**
+
+Grounded answers. Bounded promises. A data loop that closes.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-1c4a3b?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-1c4a3b?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-73%20passed-1c4a3b?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-75%20passed-1c4a3b?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-cf4a2f?style=flat-square)
 
-<a href="#界面"><img src="docs/screenshots/chat-welcome.png" alt="SureDesk 买家对话界面" width="94%"></a>
+<a href="#interface"><img src="docs/screenshots/en/chat-welcome.png" alt="SureDesk customer chat" width="94%"></a>
 
 </div>
 
-SureDesk 把「客服回答」当作一项业务承诺来处理：它能查订单、追物流、按规则处理退款，也会在证据不足时停下来，把问题交给运营，而不是编一个听起来合理的答案。
+SureDesk treats a customer service reply as a business commitment. It can look up orders, track parcels and run refunds by rule, and it stops when the evidence is thin—routing the question to an operator instead of inventing a plausible answer.
 
-买家端在 **/chat**，运营审核台在 **/workbench**，接口文档在 **/docs**。
+Customer chat lives at **/chat**, the operator review desk at **/workbench**, and API docs at **/docs**. The interface is English by default, with a Chinese switch in the header.
 
-## 界面
+## Interface
 
-对话页采用「包裹分拣台」的视觉语言：深松绿的柜台、邮戳红的操作色、纸条式的消息卡片和等宽字体的订单信息。工作台则是同一套语言下的审核台账，左侧队列、右侧审核单，补全答案后直接写入知识库。
+The design borrows from a parcel dispatch counter: a deep pine counter, postal-red actions, paper-slip messages, and tabular order details. The review desk uses the same language as an audit ledger—queue on the left, review sheet on the right—so an answer can be completed and sent back to the knowledge base.
 
 <table>
 <tr>
-<td width="64%"><img src="docs/screenshots/chat-conversation.png" alt="买家对话：订单物流查询" width="100%"></td>
-<td width="36%"><img src="docs/screenshots/workbench.png" alt="运营审核工作台" width="100%"></td>
+<td width="64%"><img src="docs/screenshots/en/chat-conversation.png" alt="Customer chat: order tracking" width="100%"></td>
+<td width="36%"><img src="docs/screenshots/en/workbench.png" alt="Operator review desk" width="100%"></td>
 </tr>
 <tr>
-<td><sub>流式回答附带检索依据；点踩会进入问题池。</sub></td>
-<td><sub>按来源筛选、搜索、补全标准答案并一键入库。</sub></td>
+<td><sub>Streamed answers carry their evidence; a negative vote enters the problem pool.</sub></td>
+<td><sub>Filter by source, search, write a standard answer and adopt it.</sub></td>
 </tr>
 </table>
 
 <table>
 <tr>
-<td width="62%"><img src="docs/screenshots/chat-multiturn.png" alt="多轮对话：继续追问送达时间" width="100%"></td>
-<td width="24%"><img src="docs/screenshots/chat-mobile.png" alt="移动端对话界面" width="100%"></td>
+<td width="62%"><img src="docs/screenshots/en/chat-multiturn.png" alt="Multi-turn chat: asking about delivery time" width="100%"></td>
+<td width="24%"><img src="docs/screenshots/en/chat-mobile.png" alt="Mobile chat interface" width="100%"></td>
 </tr>
 <tr>
-<td><sub>指代消解后继续沿用上一轮的订单上下文。</sub></td>
-<td><sub>移动端保留完整对话、引用与反馈入口。</sub></td>
+<td><sub>Pronoun resolution keeps the order context from the previous turn.</sub></td>
+<td><sub>Mobile keeps the conversation, citations and feedback.</sub></td>
 </tr>
 </table>
 
-## 它怎么工作
+## How it works
 
 ~~~mermaid
 flowchart LR
-    U[买家提问] --> A[签名鉴权]
-    A --> M[双层记忆<br/>改写与补槽]
-    M --> R{九类意图}
-    R -->|闲聊 / 违规| D[直接兜底]
-    R -->|投诉| H[转人工]
-    R -->|信息不足| C[追问]
-    R -->|退款| F[确定性退款状态机]
-    R -->|政策 / 订单| K[混合检索 + 工具调用]
-    K --> G{置信度闸门}
-    G -->|通过| S[流式回答 + 引用]
-    G -->|不足| P[问题池]
-    S --> T[Trace / 审计]
-    P --> W[运营审核台]
-    W -->|补全标准答案| KB[(知识库)]
+    U[Customer question] --> A[Signed identity]
+    A --> M[Dual-layer memory<br/>rewrite + slot filling]
+    M --> R{Nine intents}
+    R -->|Chit-chat / unsafe| D[Direct fallback]
+    R -->|Complaint| H[Human handoff]
+    R -->|Missing details| C[Clarify]
+    R -->|Refund| F[Deterministic refund state machine]
+    R -->|Policy / order| K[Hybrid retrieval + tools]
+    K --> G{Confidence gate}
+    G -->|Pass| S[Streamed answer + citations]
+    G -->|Low| P[Problem pool]
+    S --> T[Trace / audit]
+    P --> W[Operator review]
+    W -->|Write standard answer| KB[(Knowledge base)]
     KB --> K
 ~~~
 
-关键不是「接了大模型」，而是把不确定的地方收住：
+The point is not that a model is connected. The point is where uncertainty gets stopped:
 
-- **答案先过证据关。** Dense + BM25 双路召回，RRF 融合，Cross-Encoder 重排；分数不够就不让模型生成承诺。
-- **退款交给代码。** 七天规则、订单归属和幂等由确定性状态机执行，模型只负责把请求送到正确入口。
-- **没答上的问题不会消失。** 低置信度、自评失败和用户点踩统一进入问题池，运营补全后立即向量化回流。
+- **Answers pass an evidence gate.** Dense and BM25 retrieval, RRF fusion, then relevance reranking. If the score is too low, the system refuses to make a commitment.
+- **Refunds run as code.** The seven-day rule, order ownership and idempotency live in a deterministic state machine. The model only routes the request to the right entry point.
+- **Unanswered questions do not disappear.** Low confidence, failed self-evaluation and negative votes converge in the problem pool. An operator answer is vectorized back into the index.
 
-## 核心能力
+## Architecture and implementation
 
-| 层面 | 做了什么 | 关键实现 |
+SureDesk is a single FastAPI service with clear seams, rather than a distributed system. One process serves the SSE chat endpoint, the operator APIs and the two static pages; SQLite keeps the demo self-contained. Business branches stay deterministic. When `ENABLE_LLM_ANSWERS` is on and an API key is configured (the default), chat and grounded policy answers are synthesized by the LLM from the retrieved evidence; the extractive answer remains the fallback.
+
+The implementation is organized around replaceable boundaries:
+
+| Boundary | Location | Responsibility |
 |---|---|---|
-| 身份与权限 | 每次订单/物流查询都绑定认证身份，跨用户探测直接拦截并审计 | SecurityContext、行级归属校验、AuditLog |
-| 问题理解 | 多轮指代消解、短句补全、九类意图映射到五条收敛路由 | DualLayerMemory、QueryRewriter、IntentRouter |
-| 知识问答 | 标题层级感知切分，Dense 与 BM25 双路召回，RRF 融合后重排 | chunking、dense、bm25、fusion、reranker |
-| 生成边界 | 生成前检查重排分数与证据覆盖，不足则礼貌拒答并入库 | ConfidenceGate、ProblemPool |
-| 业务执行 | 退款挂起/恢复、七天硬规则、幂等凭证、订单与物流工具 | refund_workflow、ToolRegistry、MCP adapter |
-| 运营闭环 | 审核队列、标准答案补全、知识库同步、命中验证 | Workbench、adopt_and_sync |
-| 可观测性 | Trace ID、阶段耗时、Token 消耗、证据快照 | RequestTracer、stage metrics |
-| 离线实验 | 意图分类数据集、特征提取、训练与混淆矩阵评估 | offline/train.py、offline/evaluate.py |
+| API | `newcode/api/` | Signed identity, SSE chat, feedback, workbench routes |
+| Orchestration | `newcode/workflow/`, `newcode/services/` | Memory, query rewrite, intent routing, suspend/resume |
+| Retrieval | `newcode/rag/` | Chunking, dense hashed vectors, BM25, RRF, reranking |
+| Guard | `newcode/guard/` | Pre-generation confidence decision |
+| Tools | `newcode/tools/` | Schema validation, timeouts, audit, MCP adapter |
+| Data | `newcode/models/`, `newcode/services/problem_pool.py` | Users, orders, logistics, problem pool, audit, knowledge sync |
 
-## 项目结构
+~~~mermaid
+flowchart TB
+    subgraph Browser["Browser"]
+        Chat["Chat UI<br/>/chat"]
+        Desk["Review desk<br/>/workbench"]
+    end
+
+    subgraph API["FastAPI application"]
+        Auth["Signed identity<br/>role guard"]
+        Stream["/api/chat/stream<br/>SSE"]
+        Review["/api/workbench/*"]
+    end
+
+    subgraph Workflow["Workflow and services"]
+        Graph["CustomerServiceWorkflow"]
+        Memory["Dual-layer memory"]
+        Router["Rewrite + 9-intent router"]
+        Refund["Deterministic refund workflow"]
+        Agent["Agent / RAG node"]
+    end
+
+    subgraph Retrieval["Retrieval and guard"]
+        Split["Hierarchical chunker"]
+        Dense["Hashed dense vectors"]
+        BM25["BM25"]
+        RRF["RRF fusion"]
+        Rerank["Relevance reranker"]
+        Gate["Confidence gate"]
+    end
+
+    subgraph Business["Business tools"]
+        Registry["Tool registry<br/>schema + timeout + audit"]
+        Orders["Order tools"]
+        Logistics["Logistics tools"]
+        MCP["MCP adapter"]
+    end
+
+    subgraph Storage["Persistence and telemetry"]
+        DB[("SQLite<br/>SQLAlchemy async")]
+        Pool[("Problem pool")]
+        Audit[("Audit + trace")]
+        KB[("Knowledge base")]
+    end
+
+    LLM["LLM provider<br/>optional"]
+    Answer["Grounded answer<br/>+ citation"]
+
+    Chat --> Stream
+    Desk --> Review
+    Stream --> Auth
+    Review --> Auth
+    Auth --> Graph
+    Graph --> Memory
+    Memory --> Router
+    Router --> Refund
+    Router --> Agent
+    Agent --> Split
+    Split --> Dense
+    Split --> BM25
+    Dense --> RRF
+    BM25 --> RRF
+    RRF --> Rerank
+    Rerank --> Gate
+    Gate -->|pass| Answer
+    Gate -->|low confidence| Pool
+    Agent --> Registry
+    Registry --> Orders
+    Registry --> Logistics
+    Registry --> MCP
+    LLM -.->|optional synthesis| Answer
+    Answer --> Stream
+    Stream --> Audit
+    Pool --> Review
+    Review --> KB
+    KB --> Split
+    Graph --> DB
+~~~
+
+### Tech stack
+
+| Area | Stack | Role |
+|---|---|---|
+| Runtime and API | Python 3.11+, FastAPI, Uvicorn, Pydantic v2 | Typed HTTP boundaries and SSE streaming |
+| Persistence | SQLAlchemy 2 async, aiosqlite, SQLite | Async sessions, orders, problem pool, audit logs |
+| LLM client | OpenAI-compatible async client | Provider-agnostic synthesis, structured output and streaming, enabled by `ENABLE_LLM_ANSWERS` |
+| Retrieval | NumPy, rank-bm25 | Deterministic hashed n-gram vectors, BM25, RRF |
+| Reranking | Local relevance scorer behind a replaceable interface | Lexical coverage, Jaccard overlap and title bonus |
+| Security | Signed bearer tokens, role checks, SecurityContext | Authentication, authorization and row-level IDOR defense |
+| Observability | Request tracer and audit log | Trace IDs, stage latency, token usage, evidence snapshots |
+| Frontend | Vanilla HTML/CSS/JavaScript | SSE via ReadableStream, responsive chat and review desk |
+| Testing | pytest, pytest-asyncio, Playwright | Unit, integration, acceptance, browser and screenshot checks |
+| Offline experiment | NumPy logistic regression | Hashed character/bi-gram features, training and evaluation |
+
+### Request lifecycle
+
+~~~mermaid
+stateDiagram-v2
+    [*] --> LoadContext: User Message
+    LoadContext --> IntentRewrite: Dual-Layer Memory & Context Resolution
+    IntentRewrite --> Clarify: Missing Essential Slots
+    Clarify --> [*]: Request Clarification from User
+    IntentRewrite --> Route: Resolved Query & 9-Intent Classifier
+
+    state Route {
+        [*] --> BranchDecision
+        BranchDecision --> FallbackDirect: Chitchat / Safety Violation
+        BranchDecision --> TransferHuman: Complaint / Human Escalation
+        BranchDecision --> RefundWorkflow: Deterministic Refund Workflow
+        BranchDecision --> RAGKnowledge: Policy & Knowledge Q&A
+        BranchDecision --> ToolAgent: Order & Logistics Queries
+    }
+
+    RefundWorkflow --> CheckOrder: Check Order Ownership & 7-Day Window
+    CheckOrder --> OrderIneligible: Expired / Ineligible (Strict Rejection)
+    CheckOrder --> OrderEligible: Compliant (Issue RFV Voucher)
+
+    RAGKnowledge --> DenseAndBM25: Dual-Path Retrieval
+    DenseAndBM25 --> RRFFusion: Reciprocal Rank Fusion (RRF)
+    RRFFusion --> CrossEncoderRerank: Relevance Reranking
+    CrossEncoderRerank --> ConfidenceGate: Score & Evidence Threshold Check
+
+    ConfidenceGate --> LowConfidencePool: Score < Threshold (Reject & Log to Problem Pool)
+    ConfidenceGate --> MainAgent: Evidence Grounded (Pass to Generator)
+    ToolAgent --> MainAgent: Tool Execution Results
+
+    MainAgent --> SafetyCheck: Answer Synthesis & Citation
+    SafetyCheck --> StreamResponse: SSE Streaming Output
+    StreamResponse --> AuditTrace: Request-Level Tracing & Audit Log
+
+    LowConfidencePool --> ReviewWorkbench: Operator Review & Standard Answer Ingestion
+    ReviewWorkbench --> SyncKnowledge: Auto Vectorize & Sync Back to Knowledge Base
+    SyncKnowledge --> [*]
+    AuditTrace --> [*]
+~~~
+
+The diagram shows the full flow. The router is rule-based; when the LLM is enabled, the generation node answers from the supplied evidence and appends a citation. If the LLM is disabled, unavailable or times out, the node falls back to the best evidence chunk plus citation.
+
+### Implementation notes
+
+- **Deterministic first.** The router narrows every message to five routes, and refunds are executed by a state machine with suspend/resume. The LLM never owns order state or refund eligibility.
+- **Evidence before answer.** The confidence gate rejects empty or below-threshold evidence before the answer is assembled, so a refusal is cheaper and safer than a post-hoc filter.
+- **The extractive path is the fallback.** The router is rule-based. With `ENABLE_LLM_ANSWERS` and a key, the RAG node asks the model to answer only from the supplied evidence; on timeout, error or an empty response it returns the highest-ranked chunk with a citation, so the demo still runs without an API key.
+- **Zero trust at the tool boundary.** Tools receive a `SecurityContext`, re-check row ownership in SQL, and append an audit record when a cross-user probe is blocked.
+- **Local retrieval by default.** The dense retriever uses deterministic token-hash vectors and the reranker uses lexical overlap plus a title bonus, so retrieval works without an embedding service. Both sit behind interfaces that can accept a neural encoder or cross-encoder.
+- **Memory is a budget.** The near window keeps four turns (eight messages); older turns are compressed into a summary while order IDs and product entities are extracted and retained.
+- **The flywheel is a real write path.** Confidence-gate rejections, self-evaluation failures and negative votes enter the problem pool; `adopt_and_sync` writes the standard answer back into the chunk index, and the next identical question retrieves it.
+- **Observability is request-level.** `RequestTracer` records stage latency, token accounting and retrieved evidence per request; blocked IDOR probes and tool failures are persisted in `AuditLog`.
+- **The UI is deliberately small.** The frontend is dependency-free HTML/CSS/JavaScript: it consumes SSE with `ReadableStream`, renders answers and citations, and persists only the access token and language choice.
+
+
+## Core capabilities
+
+| Layer | What it does | Key pieces |
+|---|---|---|
+| Identity and access | Every order or logistics lookup is bound to the authenticated user; cross-user probing is blocked and audited | SecurityContext, row-level ownership checks, AuditLog |
+| Question understanding | Pronoun resolution, short-query completion, nine intents mapped onto five convergence routes | DualLayerMemory, QueryRewriter, IntentRouter |
+| Knowledge QA | Heading-aware chunking, dense + BM25 retrieval, RRF fusion, relevance reranking | chunking, dense, bm25, fusion, reranker |
+| Generation boundary | Rerank score and evidence coverage checked before generation; low confidence is refused and logged | ConfidenceGate, ProblemPool |
+| Business execution | Refund suspend/resume, seven-day rule, idempotent vouchers, order and logistics tools | refund_workflow, ToolRegistry, MCP adapter |
+| Operations loop | Review queue, standard-answer authoring, knowledge sync, hit verification | Workbench, adopt_and_sync |
+| Observability | Trace ID, stage latency, token usage, evidence snapshots | RequestTracer, stage metrics |
+| Offline experiments | Intent dataset, feature extraction, training and confusion-matrix evaluation | offline/train.py, offline/evaluate.py |
+
+## Project layout
 
 ~~~text
 newcode/
-├── api/          # 鉴权、SSE 对话、反馈、审核台接口
-├── core/         # 配置、数据库、LLM 封装、Tracing
-├── guard/        # 生成前置信度闸门
+├── api/          # auth, SSE chat, feedback, workbench endpoints
+├── core/         # settings, database, LLM wrapper, tracing
+├── guard/        # pre-generation confidence gate
 ├── models/       # User / Order / Logistics / ProblemPool / AuditLog
-├── offline/      # 意图分类训练与评估
-├── rag/          # 切分、Dense、BM25、RRF、重排、评测
-├── services/     # 记忆、路由、问题池、运行时组装
-├── tools/        # 订单与物流工具、工具注册表、MCP 适配
-├── workflow/     # 总编排与确定性退款状态机
+├── offline/      # intent classifier training and evaluation
+├── rag/          # chunking, dense, BM25, RRF, reranking, evaluation
+├── services/     # memory, router, problem pool, runtime assembly
+├── tools/        # order and logistics tools, registry, MCP adapter
+├── workflow/     # orchestration and deterministic refund workflow
 └── ui/static/    # chat.html / workbench.html
 
 docs/
-├── SPEC.md                  # 需求规格
-├── PLAN.md                  # 实施计划
-├── ACCEPTANCE_REPORT.md     # 验收报告
-├── RAG_EVALUATION.md        # 检索评测
-├── learning-agent/          # 八篇源码导读
-├── tutorial/                # 产品演示视频
-└── screenshots/             # README 界面截图
+├── SPEC.md                  # requirements
+├── PLAN.md                  # implementation plan
+├── ACCEPTANCE_REPORT.md     # acceptance evidence
+├── RAG_EVALUATION.md        # retrieval benchmarks
+├── learning-agent/          # eight-part code walkthrough
+├── tutorial/                # product demo video
+└── screenshots/             # README screenshots (en / zh)
 
 scripts/
-├── seed_data.py             # 种子数据
-├── create_access_token.py   # 本地签名令牌
-├── evaluate_rag.py          # RAG 基准评测
-└── capture_ui.py            # 浏览器截图与视觉检查
+├── seed_data.py             # seed data
+├── create_access_token.py   # local signed token
+├── evaluate_rag.py          # RAG benchmark
+└── capture_ui.py            # browser screenshots and visual checks
 ~~~
 
-## 快速开始
+## Quick start
 
-需要 Python 3.11+ 和 [uv](https://github.com/astral-sh/uv)。
+Requires Python 3.11+ and [uv](https://github.com/astral-sh/uv).
 
 ~~~bash
 git clone git@github.com:ZhenweiTang0908/SureDesk.git
@@ -128,19 +295,22 @@ source .venv/bin/activate
 uv pip install -e ".[dev]"
 ~~~
 
-在根目录创建 .env：
+Create .env in the project root:
 
 ~~~env
 OPENAI_API_BASE=https://1yuanapi.com/v1
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-5.6-terra
+ENABLE_LLM_ANSWERS=True
 DATABASE_URL=sqlite+aiosqlite:///suredesk.db
 AUTH_SECRET=replace-with-a-long-random-secret
 CORS_ALLOWED_ORIGINS=http://localhost:8000
 DEBUG=False
 ~~~
 
-初始化数据、创建令牌并启动：
+With `ENABLE_LLM_ANSWERS=True` and a valid key, chat and policy answers are generated by the model from retrieved evidence. Set it to `False` for a fully offline deterministic demo; the extractive path still works.
+
+Seed the database, create tokens, and start the server:
 
 ~~~bash
 .venv/bin/python scripts/seed_data.py
@@ -151,69 +321,63 @@ DEBUG=False
 .venv/bin/uvicorn newcode.main:app --host 127.0.0.1 --port 8000
 ~~~
 
-打开页面后，在浏览器控制台写入对应令牌并刷新：
+Store the matching token in the browser console and reload:
 
 ~~~javascript
-localStorage.setItem("suredesk_access_token", "粘贴对应令牌");
+localStorage.setItem("suredesk_access_token", "paste-your-token");
 location.reload();
 ~~~
 
-- 买家对话：[http://127.0.0.1:8000/chat](http://127.0.0.1:8000/chat)
-- 运营审核台：[http://127.0.0.1:8000/workbench](http://127.0.0.1:8000/workbench)
-- 接口文档：[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Customer chat: [http://127.0.0.1:8000/chat](http://127.0.0.1:8000/chat)
+- Operator review desk: [http://127.0.0.1:8000/workbench](http://127.0.0.1:8000/workbench)
+- API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-## 测试与评测
+Use the **中文 / EN** control in the header to switch the interface language; the choice is stored in localStorage.
+
+## Tests and evaluation
 
 ~~~bash
-# 单元、集成、前端安全与验收测试
+# unit, integration, frontend security and acceptance tests
 .venv/bin/python -m pytest -q
 
-# 六项验收标准
+# six acceptance criteria
 .venv/bin/python -m pytest tests/test_full_acceptance.py -v
 
-# RAG 检索基准
+# retrieval benchmark
 .venv/bin/python scripts/evaluate_rag.py
 ~~~
 
-| 验收项 | 指标 | 结果 |
+| Criterion | Metric | Result |
 |---|---|---|
-| AC1 意图与指代消解 | 20 组多轮样例 | 100%（20/20） |
-| AC2 IDOR 越权防御 | 跨用户订单探测 | 100% 拦截并审计 |
-| AC3 混合检索 | Recall@5 / MRR | 100% / 0.9500 |
-| AC4 置信度闸门 | 无依据问题拒答 | 100%，0 幻觉承诺 |
-| AC5 退款规则 | 超过 7 天硬拦截 | 100% 严格执行 |
-| AC6 数据飞轮 | 拒答 → 审核 → 入库 → 命中 | 闭环验证通过 |
+| AC1 intent and pronoun resolution | 20 multi-turn cases | 100% (20/20) |
+| AC2 IDOR defense | cross-user order probing | 100% blocked and audited |
+| AC3 hybrid retrieval | Recall@5 / MRR | 100% / 0.9500 |
+| AC4 confidence gate | unsupported questions | 100% refused, 0 hallucinated commitments |
+| AC5 refund rules | orders older than 7 days | 100% hard rejection |
+| AC6 data flywheel | reject → review → ingest → hit | closed-loop verified |
 
-## 界面设计与截图
+## Interface design and screenshots
 
-界面使用 Anthropic 公开的 [frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) 与 [webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing) 两个 skill 完成设计和浏览器验收。相关 skill 已收录在 .claude/skills/，并保留 Apache 2.0 许可证。
+The UI was designed and verified with Anthropic's public [frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) and [webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing) skills. Both are vendored under .claude/skills/ with their Apache 2.0 licenses.
 
-重新生成 README 截图：
+Regenerate the README screenshots:
 
 ~~~bash
 uv pip install -e ".[screenshots]"
 .venv/bin/playwright install chromium
 
-# 另开一个终端启动服务后执行
+# start the server in another terminal, then:
 AUTH_SECRET=replace-with-the-same-secret .venv/bin/python scripts/capture_ui.py
 ~~~
 
-截图脚本会在真实 Chromium 中检查桌面、移动端和工作台布局，并把结果写入 docs/screenshots/。
+The capture script checks desktop, mobile and review-desk layouts in Chromium and writes English and Chinese sets to docs/screenshots/en/ and docs/screenshots/zh/.
 
-## 文档
+## Docs
 
-- [需求规格](docs/SPEC.md) · [实施计划](docs/PLAN.md) · [验收报告](docs/ACCEPTANCE_REPORT.md)
-- [RAG 评测](docs/RAG_EVALUATION.md)
-- [源码导读](docs/learning-agent/README.md)
-- [产品演示视频](docs/tutorial/README.md)
-
-## English overview
-
-SureDesk is a production-grade e-commerce AI customer service system. It combines signed identity and row-level order ownership checks, dual-layer conversation memory, nine intents mapped onto five routing channels, hybrid dense + BM25 retrieval with RRF and cross-encoder reranking, a pre-generation confidence gate, deterministic refund rules, and an operator workbench that turns unanswered questions into reviewed knowledge.
-
-The buyer interface streams cited answers over SSE; the workbench lets operators triage low-confidence and negative-feedback questions, write standard answers, and sync them back into the retrieval index. The full test suite covers authentication, IDOR defense, routing, retrieval, refund state transitions, frontend security, and the data flywheel.
-
-See [Quick Start](#快速开始) for local setup and [docs/learning-agent](docs/learning-agent/README.md) for a guided code walkthrough.
+- [Requirements](docs/SPEC.md) · [Plan](docs/PLAN.md) · [Acceptance report](docs/ACCEPTANCE_REPORT.md)
+- [RAG evaluation](docs/RAG_EVALUATION.md)
+- [Code walkthrough](docs/learning-agent/README.md)
+- [Product demo](docs/tutorial/README.md)
 
 ## License
 

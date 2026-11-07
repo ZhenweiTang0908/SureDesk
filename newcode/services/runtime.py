@@ -7,7 +7,9 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from newcode.core.config import settings
 from newcode.core.database import AsyncSessionLocal
+from newcode.core.llm import get_llm_client
 from newcode.models.domain import OperatorStatus, ProblemPool
 from newcode.rag.engine import HybridRetrievalEngine
 from newcode.services.problem_pool import ProblemPoolService
@@ -27,10 +29,16 @@ class ApplicationServices:
         self.tool_registry.register(ListOrdersTool())
         self.tool_registry.register(QueryLogisticsTool())
         self.problem_pool = ProblemPoolService()
+        self.llm_client = (
+            get_llm_client()
+            if settings.ENABLE_LLM_ANSWERS and settings.OPENAI_API_KEY
+            else None
+        )
         self.workflow = CustomerServiceWorkflow(
             rag_engine=self.rag_engine,
             tool_registry=self.tool_registry,
             problem_pool_service=self.problem_pool,
+            llm_client=self.llm_client,
         )
         self._initialized = False
         self._initialization_lock = asyncio.Lock()

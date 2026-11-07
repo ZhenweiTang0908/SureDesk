@@ -35,7 +35,7 @@ class CrossEncoderReranker:
 
                 # Title path bonus
                 title_tokens = set(re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]", chunk.title_path.lower()))
-                title_bonus = 0.2 if (q_tokens & title_tokens) else 0.0
+                title_bonus = 0.3 if (q_tokens & title_tokens) else 0.0
 
                 # Combined score bounded in [0.0, 1.0]
                 raw_score = 0.55 * query_cov + 0.25 * jaccard + title_bonus

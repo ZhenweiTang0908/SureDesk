@@ -3,6 +3,7 @@ Overall LangGraph Workflow Orchestrator.
 """
 from __future__ import annotations
 
+from newcode.core.llm import LLMClient
 from newcode.core.tracing import RequestTracer
 from newcode.rag.engine import HybridRetrievalEngine
 from newcode.services.memory import DualLayerMemoryManager
@@ -20,11 +21,13 @@ class CustomerServiceWorkflow:
         rag_engine: HybridRetrievalEngine | None = None,
         tool_registry: ToolRegistry | None = None,
         problem_pool_service: ProblemPoolService | None = None,
+        llm_client: LLMClient | None = None,
     ):
         self.router = ContextQueryRewriterAndRouter()
         self.rag_engine = rag_engine or HybridRetrievalEngine()
         self.tool_registry = tool_registry or ToolRegistry()
         self.problem_pool_service = problem_pool_service or ProblemPoolService()
+        self.llm_client = llm_client
         self.memory = DualLayerMemoryManager()
         self.sessions: dict[tuple[str, str], CustomerServiceState] = {}
 
@@ -85,6 +88,7 @@ class CustomerServiceWorkflow:
                 rag_engine=self.rag_engine,
                 tool_registry=self.tool_registry,
                 problem_pool_service=self.problem_pool_service,
+                llm_client=self.llm_client,
             )
             execution_span.finish(confidence=state.confidence_score)
 

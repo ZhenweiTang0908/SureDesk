@@ -6,7 +6,7 @@
 - **Test Environment**: macOS aarch64 (Darwin), Python 3.13.14 (Virtualenv via uv)
 - **Database**: SQLite 3 (Async engine via aiosqlite, with row-level security indexes & audit trail)
 - **LLM Compatibility**: OpenAI-compatible endpoint ([1yuanapi.com](https://1yuanapi.com/v1) with `gpt-5.6-terra`)
-- **Total Test Execution**: **73 / 73 test cases passed (100% pass rate)**
+- **Total Test Execution**: **75 / 75 test cases passed (100% pass rate)**
 
 ---
 
@@ -64,7 +64,7 @@
 - **测试环境**: macOS aarch64 (Darwin), Python 3.13.14 (Virtualenv via uv)
 - **数据库**: SQLite 3 (aiosqlite 异步引擎，支持行级隔离与审计)
 - **大模型支持**: OpenAI / 1yuanapi.com (gpt-5.6-terra)
-- **测试执行结果**: **73 / 73 测试项全部通过（通过率 100%）**
+- **测试执行结果**: **75 / 75 测试项全部通过（通过率 100%）**
 
 ---
 

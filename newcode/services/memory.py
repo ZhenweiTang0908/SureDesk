@@ -63,7 +63,7 @@ class DualLayerMemoryManager:
 
         for msg in messages:
             content = msg.get("content", "")
-            found_orders = re.findall(r"ord_[a-zA-Z0-9_]+", content)
+            found_orders = re.findall(r"ord(?:er)?_[a-zA-Z0-9_]+", content)
             orders.update(found_orders)
 
             raw_products = re.findall(

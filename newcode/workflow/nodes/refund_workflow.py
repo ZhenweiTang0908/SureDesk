@@ -24,7 +24,7 @@ async def execute_refund_workflow(state: CustomerServiceState) -> CustomerServic
     # 1. Extract order_id from state or query
     order_id = state.order_id
     if not order_id:
-        match = re.search(r"ord_[a-zA-Z0-9_]+", state.rewritten_query or state.query)
+        match = re.search(r"ord(?:er)?_[a-zA-Z0-9_]+", state.rewritten_query or state.query)
         if match:
             order_id = match.group(0)
 
@@ -32,7 +32,7 @@ async def execute_refund_workflow(state: CustomerServiceState) -> CustomerServic
     if not order_id:
         state.is_suspended = True
         state.refund_status = "PENDING_ORDER_ID"
-        state.pending_prompt = "请问您需要申请退款的订单号是多少？（例如 ord_1001）"
+        state.pending_prompt = "请问您需要申请退款的订单号是多少？（例如 order_1001）"
         state.final_answer = state.pending_prompt
         state.thoughts.append("退款流程中途挂起：缺少必要参数 order_id，向买家发起追问。")
         return state

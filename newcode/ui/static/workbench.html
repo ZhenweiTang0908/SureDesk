@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SureDesk · 审核台</title>
+  <title>SureDesk · Review desk</title>
   <style>
     :root {
       color-scheme: light;
@@ -98,6 +98,24 @@
       font-style: normal;
     }
 
+    .masthead-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .lang-toggle {
+      padding: 0 0 2px;
+      border: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      background: none;
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .lang-toggle:hover { border-bottom-color: #fff; }
+
     .masthead a.back {
       color: #fff;
       font-size: 12px;
@@ -184,7 +202,7 @@
       cursor: pointer;
     }
 
-    .tab span {
+    .tab .tab-count {
       margin-left: 3px;
       color: #8a958e;
       font-family: var(--mono);
@@ -562,7 +580,7 @@
     @media (max-width: 420px) {
       .tabs { gap: 0; }
       .tab { padding-left: 4px; padding-right: 4px; }
-      .tab span { display: none; }
+      .tab .tab-count { display: none; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -578,34 +596,37 @@
     <div class="masthead-inner">
       <a class="brand" href="/chat">
         <span class="brand-mark" aria-hidden="true">S</span>
-        SureDesk<em>审核台</em>
+        SureDesk<em data-i18n="reviewDesk">Review desk</em>
       </a>
-      <a class="back" href="/chat">买家端</a>
+      <div class="masthead-right">
+        <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">中文</button>
+        <a class="back" href="/chat" data-i18n="buyerSide">Buyer side</a>
+      </div>
     </div>
   </header>
 
   <main class="page">
     <div class="page-head">
-      <h1>审核队列</h1>
-      <div class="count" id="statPending" aria-label="待审核数量">—</div>
+      <h1 data-i18n="queueTitle">Review queue</h1>
+      <div class="count" id="statPending" aria-label="Pending review">—</div>
     </div>
 
     <section class="workspace">
       <div class="queue">
         <div class="toolbar">
-          <div class="tabs" role="tablist" aria-label="筛选">
-            <button class="tab is-active" data-filter="ALL" role="tab" aria-selected="true">全部 <span id="tabAllCount">—</span></button>
-            <button class="tab" data-filter="CONFIDENCE_GATE" role="tab" aria-selected="false">拦截 <span id="tabGateCount">—</span></button>
-            <button class="tab" data-filter="USER_THUMBS_DOWN" role="tab" aria-selected="false">负反馈 <span id="tabThumbCount">—</span></button>
+          <div class="tabs" role="tablist" aria-label="Filter" data-i18n-aria="filterAria">
+            <button class="tab is-active" data-filter="ALL" role="tab" aria-selected="true"><span data-i18n="all">All</span> <span class="tab-count" id="tabAllCount">—</span></button>
+            <button class="tab" data-filter="CONFIDENCE_GATE" role="tab" aria-selected="false"><span data-i18n="gate">Gate</span> <span class="tab-count" id="tabGateCount">—</span></button>
+            <button class="tab" data-filter="USER_THUMBS_DOWN" role="tab" aria-selected="false"><span data-i18n="thumbs">Thumbs down</span> <span class="tab-count" id="tabThumbCount">—</span></button>
           </div>
           <label class="search">
             <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.3"/>
               <path d="m10.4 10.4 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
-            <input id="searchInput" type="search" placeholder="搜索" aria-label="搜索">
+            <input id="searchInput" type="search" placeholder="Search" aria-label="Search" data-i18n-placeholder="search" data-i18n-aria="search">
           </label>
-          <button class="refresh" id="refreshBtn" aria-label="刷新">
+          <button class="refresh" id="refreshBtn" aria-label="Refresh" data-i18n-aria="refresh">
             <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.8V6h-3.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -619,10 +640,10 @@
         </div>
       </div>
 
-      <aside class="detail" id="detailPanel" aria-label="审核详情">
+      <aside class="detail" id="detailPanel" aria-label="Review details" data-i18n-aria="detailAria">
         <div class="detail-empty" id="detailEmpty">
-          <div class="empty-mark" aria-hidden="true">待</div>
-          <p>未选择</p>
+          <div class="empty-mark" aria-hidden="true">—</div>
+          <p data-i18n="nothingSelected">Nothing selected</p>
         </div>
 
         <div class="detail-content" id="detailContent" hidden>
@@ -633,17 +654,17 @@
           <h2 class="detail-query" id="detailQuery"></h2>
           <p class="detail-rewrite" id="detailRewrite"></p>
           <details class="original" id="originalBlock">
-            <summary>原始回答</summary>
+            <summary data-i18n="originalAnswer">Original answer</summary>
             <p id="detailAnswer"></p>
           </details>
-          <textarea id="answerInput" rows="6" placeholder="标准答案" aria-label="标准答案"></textarea>
+          <textarea id="answerInput" rows="6" placeholder="Standard answer" aria-label="Standard answer" data-i18n-placeholder="standardAnswer" data-i18n-aria="standardAnswer"></textarea>
           <div class="detail-actions">
-            <button class="btn btn-primary" id="adoptBtn">采纳</button>
-            <button class="btn btn-quiet" id="ignoreBtn">忽略</button>
+            <button class="btn btn-primary" id="adoptBtn" data-i18n="adopt">Adopt</button>
+            <button class="btn btn-quiet" id="ignoreBtn" data-i18n="ignore">Ignore</button>
           </div>
         </div>
 
-        <div class="adopt-stamp" id="adoptStamp" aria-hidden="true">已入库</div>
+        <div class="adopt-stamp" id="adoptStamp" aria-hidden="true" data-i18n="saved">Saved</div>
       </aside>
     </section>
   </main>
@@ -667,6 +688,7 @@
     const adoptBtn = document.getElementById("adoptBtn");
     const ignoreBtn = document.getElementById("ignoreBtn");
     const adoptStamp = document.getElementById("adoptStamp");
+    const langToggle = document.getElementById("langToggle");
 
     const state = {
       problems: [],
@@ -676,6 +698,107 @@
     };
     const drafts = {};
     let toastTimer = null;
+
+    const LANG = localStorage.getItem("suredesk_lang") === "zh" ? "zh" : "en";
+    const I18N = {
+      en: {
+        pageTitle: "SureDesk · Review desk",
+        reviewDesk: "Review desk",
+        buyerSide: "Buyer side",
+        queueTitle: "Review queue",
+        pendingAria: "{n} pending",
+        all: "All",
+        gate: "Gate",
+        thumbs: "Thumbs down",
+        search: "Search",
+        refresh: "Refresh",
+        nothingSelected: "Nothing selected",
+        queueClear: "Queue is clear",
+        noMatches: "No matches",
+        originalAnswer: "Original answer",
+        standardAnswer: "Standard answer",
+        adopt: "Adopt",
+        ignore: "Ignore",
+        saved: "Saved",
+        writeFirst: "Write an answer first",
+        adopted: "Adopted",
+        ignored: "Ignored",
+        submitFailed: "Submission failed",
+        actionFailed: "Action failed",
+        operatorToken: "Operator token required",
+        loadFailed: "Load failed",
+        badgeGate: "Confidence gate",
+        badgeThumb: "Thumbs down",
+        badgeSelf: "Self-eval failed",
+        badgeUnknown: "Unclassified",
+        notRecorded: "Not recorded",
+        filterAria: "Filter",
+        detailAria: "Review details",
+        retry: "Retry"
+      },
+      zh: {
+        pageTitle: "SureDesk · 审核台",
+        reviewDesk: "审核台",
+        buyerSide: "买家端",
+        queueTitle: "审核队列",
+        pendingAria: "{n} 条待审核",
+        all: "全部",
+        gate: "拦截",
+        thumbs: "负反馈",
+        search: "搜索",
+        refresh: "刷新",
+        nothingSelected: "未选择",
+        queueClear: "队列空了",
+        noMatches: "没有匹配",
+        originalAnswer: "原始回答",
+        standardAnswer: "标准答案",
+        adopt: "采纳",
+        ignore: "忽略",
+        saved: "已入库",
+        writeFirst: "先写答案",
+        adopted: "已采纳",
+        ignored: "已忽略",
+        submitFailed: "提交失败",
+        actionFailed: "操作失败",
+        operatorToken: "需要运营角色令牌",
+        loadFailed: "加载失败",
+        badgeGate: "置信度拦截",
+        badgeThumb: "用户负反馈",
+        badgeSelf: "自评未过",
+        badgeUnknown: "待分类",
+        notRecorded: "未记录",
+        filterAria: "筛选",
+        detailAria: "审核详情",
+        retry: "重试"
+      }
+    };
+
+    function t(key) {
+      return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+    }
+
+    function applyI18n() {
+      document.documentElement.lang = LANG === "zh" ? "zh-CN" : "en";
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        el.textContent = t(el.getAttribute("data-i18n"));
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+      });
+      document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+        el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria")));
+      });
+      document.title = t("pageTitle");
+      langToggle.textContent = LANG === "en" ? "中文" : "EN";
+      langToggle.setAttribute("aria-label", LANG === "en" ? "Switch to Chinese" : "Switch to English");
+    }
+
+    applyI18n();
+
+    langToggle.addEventListener("click", () => {
+      localStorage.setItem("suredesk_lang", LANG === "en" ? "zh" : "en");
+      location.reload();
+    });
 
     function getAuthHeaders(customHeaders = {}) {
       const headers = Object.assign({}, customHeaders);
@@ -694,10 +817,10 @@
     }
 
     function triggerLabel(type) {
-      if (type === "CONFIDENCE_GATE") return "置信度拦截";
-      if (type === "USER_THUMBS_DOWN") return "用户负反馈";
-      if (type === "SELF_EVAL_FAIL") return "自评未过";
-      return "待分类";
+      if (type === "CONFIDENCE_GATE") return t("badgeGate");
+      if (type === "USER_THUMBS_DOWN") return t("badgeThumb");
+      if (type === "SELF_EVAL_FAIL") return t("badgeSelf");
+      return t("badgeUnknown");
     }
 
     function triggerClass(type) {
@@ -717,7 +840,7 @@
       if (!value) return "";
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return "";
-      return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+      return date.toLocaleTimeString(LANG === "zh" ? "zh-CN" : "en-GB", { hour: "2-digit", minute: "2-digit" });
     }
 
     function updateCounts() {
@@ -725,7 +848,7 @@
       const gate = state.problems.filter(p => p.trigger_type === "CONFIDENCE_GATE").length;
       const thumb = state.problems.filter(p => p.trigger_type === "USER_THUMBS_DOWN").length;
       document.getElementById("statPending").textContent = total;
-      document.getElementById("statPending").setAttribute("aria-label", total + " 条待审核");
+      document.getElementById("statPending").setAttribute("aria-label", t("pendingAria").replace("{n}", String(total)));
       document.getElementById("tabAllCount").textContent = total;
       document.getElementById("tabGateCount").textContent = gate;
       document.getElementById("tabThumbCount").textContent = thumb;
@@ -752,7 +875,7 @@
       const copy = document.createElement("p");
       copy.textContent = message;
       const retry = document.createElement("button");
-      retry.textContent = "重试";
+      retry.textContent = t("retry");
       retry.addEventListener("click", loadProblems);
       box.appendChild(copy);
       box.appendChild(retry);
@@ -775,9 +898,9 @@
         const mark = document.createElement("div");
         mark.className = "empty-mark";
         mark.setAttribute("aria-hidden", "true");
-        mark.textContent = "空";
+        mark.textContent = "—";
         const copy = document.createElement("p");
-        copy.textContent = state.problems.length === 0 ? "队列空了" : "没有匹配";
+        copy.textContent = state.problems.length === 0 ? t("queueClear") : t("noMatches");
         box.appendChild(mark);
         box.appendChild(copy);
         listEl.appendChild(box);
@@ -801,7 +924,7 @@
 
         const question = document.createElement("p");
         question.className = "row-query";
-        question.textContent = problem.query || "未记录";
+        question.textContent = problem.query || t("notRecorded");
 
         row.appendChild(top);
         row.appendChild(question);
@@ -818,7 +941,7 @@
       detailBadge.className = "badge " + triggerClass(problem.trigger_type);
       detailBadge.textContent = triggerLabel(problem.trigger_type);
       detailTime.textContent = formatTime(problem.created_at);
-      detailQuery.textContent = problem.query || "未记录";
+      detailQuery.textContent = problem.query || t("notRecorded");
 
       if (problem.rewritten_query) {
         detailRewrite.hidden = false;
@@ -861,9 +984,9 @@
 
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
-            throw new Error("需要运营角色令牌");
+            throw new Error(t("operatorToken"));
           }
-          throw new Error("加载失败 " + res.status);
+          throw new Error(t("loadFailed") + " " + res.status);
         }
 
         const data = await res.json();
@@ -885,7 +1008,7 @@
           detailContent.hidden = true;
         }
       } catch (err) {
-        renderError(err && err.message ? err.message : "加载失败");
+        renderError(err && err.message ? err.message : t("loadFailed"));
       } finally {
         refreshBtn.classList.remove("is-loading");
         refreshBtn.disabled = false;
@@ -895,7 +1018,7 @@
     async function adoptProblem(id, textareaElement) {
       const answer = (textareaElement ? textareaElement.value : answerInput.value).trim();
       if (!answer) {
-        showToast("先写答案");
+        showToast(t("writeFirst"));
         answerInput.focus();
         return;
       }
@@ -914,14 +1037,14 @@
         adoptStamp.classList.add("is-visible");
         delete drafts[id];
         state.selectedId = null;
-        showToast("已采纳");
+        showToast(t("adopted"));
         setTimeout(() => {
           adoptStamp.classList.remove("is-visible");
           loadProblems();
         }, 850);
       } catch (err) {
         adoptBtn.disabled = false;
-        showToast("提交失败");
+        showToast(t("submitFailed"));
       }
     }
 
@@ -937,11 +1060,11 @@
 
         delete drafts[id];
         state.selectedId = null;
-        showToast("已忽略");
+        showToast(t("ignored"));
         loadProblems();
       } catch (err) {
         ignoreBtn.disabled = false;
-        showToast("操作失败");
+        showToast(t("actionFailed"));
       }
     }
 

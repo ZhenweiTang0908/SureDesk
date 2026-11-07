@@ -22,6 +22,10 @@ class Settings(BaseSettings):
         default="gpt-5.6-terra",
         description="Default model name for chat and completions",
     )
+    ENABLE_LLM_ANSWERS: bool = Field(
+        default=True,
+        description="Generate grounded answers with the configured LLM; disable for fully offline deterministic mode.",
+    )
 
     # Database Settings
     DATABASE_URL: str = Field(

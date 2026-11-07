@@ -133,6 +133,18 @@
 
     .workbench-link:hover { border-bottom-color: #fff; }
 
+    .lang-toggle {
+      padding: 0 0 2px;
+      border: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      background: none;
+      color: #fff;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .lang-toggle:hover { border-bottom-color: #fff; }
+
     .messages {
       flex: 1;
       min-height: 0;
@@ -496,26 +508,27 @@
         SureDesk
       </div>
       <div class="masthead-right">
-        <span class="online">在线</span>
-        <a class="workbench-link" href="/workbench">审核台</a>
+        <span class="online" data-i18n="online">Online</span>
+        <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">中文</button>
+        <a class="workbench-link" href="/workbench" data-i18n="reviewDesk">Review desk</a>
       </div>
     </header>
 
     <main class="messages" id="messages" aria-live="polite">
       <section class="welcome" id="welcome">
-        <h1>把问题留在这里，<br>剩下的我们来查。</h1>
+        <h1><span data-i18n="headline1">Leave the question here.</span><br><span data-i18n="headline2">We'll do the digging.</span></h1>
         <div class="prompts">
-          <button class="prompt" data-prompt="我的订单 order_1002 发货了吗？">我的耳机到哪了？</button>
-          <button class="prompt" data-prompt="签收超过 7 天还能退货吗？">超过 7 天还能退吗？</button>
-          <button class="prompt" data-prompt="我想申请退款，订单号是 order_1001。">帮我申请一笔退款</button>
+          <button class="prompt" data-prompt="Where is order order_1002?" data-i18n="prompt1" data-i18n-prompt="prompt1Text">Where are my earbuds?</button>
+          <button class="prompt" data-prompt="Can I still return it after 7 days?" data-i18n="prompt2" data-i18n-prompt="prompt2Text">Can I return it after 7 days?</button>
+          <button class="prompt" data-prompt="I'd like a refund for order order_1001." data-i18n="prompt3" data-i18n-prompt="prompt3Text">Start a refund</button>
         </div>
       </section>
     </main>
 
     <div class="composer">
       <form class="composer-box" id="composerForm">
-        <textarea id="userInput" rows="1" placeholder="问点什么…" autocomplete="off" aria-label="输入问题"></textarea>
-        <button type="submit" class="send" id="sendBtn">发送</button>
+        <textarea id="userInput" rows="1" placeholder="Ask anything…" autocomplete="off" aria-label="Your question" data-i18n-placeholder="placeholder" data-i18n-aria="inputAria"></textarea>
+        <button type="submit" class="send" id="sendBtn" data-i18n="send">Send</button>
       </form>
     </div>
   </div>
@@ -529,8 +542,104 @@
     const sendBtn = document.getElementById("sendBtn");
     const toastEl = document.getElementById("toast");
     const welcomeEl = document.getElementById("welcome");
+    const langToggle = document.getElementById("langToggle");
     let isSending = false;
     let toastTimer = null;
+
+    const LANG = localStorage.getItem("suredesk_lang") === "zh" ? "zh" : "en";
+    const I18N = {
+      en: {
+        online: "Online",
+        reviewDesk: "Review desk",
+        headline1: "Leave the question here.",
+        headline2: "We'll do the digging.",
+        prompt1: "Where are my earbuds?",
+        prompt1Text: "Where is order order_1002?",
+        prompt2: "Can I return it after 7 days?",
+        prompt2Text: "Can I still return it after 7 days?",
+        prompt3: "Start a refund",
+        prompt3Text: "I'd like a refund for order order_1001.",
+        placeholder: "Ask anything…",
+        inputAria: "Your question",
+        send: "Send",
+        noTokenTitle: "No access token yet",
+        noTokenToast: "No access token",
+        replying: "Replying",
+        helpful: "Helpful",
+        notHelpful: "Not solved",
+        fallback: "Got it.",
+        connectError: "Couldn't connect. Try again.",
+        retry: "Retry",
+        saved: "Saved",
+        sentToOps: "Sent to ops",
+        thanks: "Thanks",
+        gotIt: "Got it",
+        submitFailed: "Couldn't submit. Try again.",
+        serviceError: "Service error",
+        document: "Document",
+        tokenPlaceholder: "your-token"
+      },
+      zh: {
+        online: "在线",
+        reviewDesk: "审核台",
+        headline1: "把问题留在这里，",
+        headline2: "剩下的我们来查。",
+        prompt1: "我的耳机到哪了？",
+        prompt1Text: "我的订单 order_1002 发货了吗？",
+        prompt2: "超过 7 天还能退吗？",
+        prompt2Text: "签收超过 7 天还能退货吗？",
+        prompt3: "帮我申请一笔退款",
+        prompt3Text: "我想申请退款，订单号是 order_1001。",
+        placeholder: "问点什么…",
+        inputAria: "输入问题",
+        send: "发送",
+        noTokenTitle: "还没有访问令牌",
+        noTokenToast: "未检测到访问令牌",
+        replying: "正在回复",
+        helpful: "有帮助",
+        notHelpful: "没解决",
+        fallback: "已收到。",
+        connectError: "刚才没连上，再试一次。",
+        retry: "重试",
+        saved: "已记录",
+        sentToOps: "已转运营",
+        thanks: "谢谢",
+        gotIt: "已收到",
+        submitFailed: "提交失败，再试一次",
+        serviceError: "服务发生错误",
+        document: "文档",
+        tokenPlaceholder: "你的令牌"
+      }
+    };
+
+    function t(key) {
+      return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+    }
+
+    function applyI18n() {
+      document.documentElement.lang = LANG === "zh" ? "zh-CN" : "en";
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        el.textContent = t(el.getAttribute("data-i18n"));
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+      });
+      document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+        el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria")));
+      });
+      document.querySelectorAll("[data-i18n-prompt]").forEach((el) => {
+        el.setAttribute("data-prompt", t(el.getAttribute("data-i18n-prompt")));
+      });
+      langToggle.textContent = LANG === "en" ? "中文" : "EN";
+      langToggle.setAttribute("aria-label", LANG === "en" ? "Switch to Chinese" : "Switch to English");
+    }
+
+    applyI18n();
+
+    langToggle.addEventListener("click", () => {
+      localStorage.setItem("suredesk_lang", LANG === "en" ? "zh" : "en");
+      location.reload();
+    });
 
     function getAuthenticatedUserId() {
       const token = localStorage.getItem("suredesk_access_token");
@@ -627,7 +736,7 @@
       } else if (eventType === "evidence") {
         if (handlers.onEvidence) handlers.onEvidence(payload);
       } else if (eventType === "error") {
-        const errMsg = typeof payload === "object" && payload ? (payload.message || payload.error || "服务发生错误") : String(payload);
+        const errMsg = typeof payload === "object" && payload ? (payload.message || payload.error || t("serviceError")) : String(payload);
         if (handlers.onError) handlers.onError(errMsg);
       }
     }
@@ -658,7 +767,7 @@
     function renderEvidence(container, evidenceList) {
       if (!evidenceList || !Array.isArray(evidenceList) || evidenceList.length === 0) return;
       const titles = evidenceList
-        .map(e => e.doc_title || e.title || (e.doc_id ? "文档 " + e.doc_id : ""))
+        .map(e => e.doc_title || e.title || (e.doc_id ? t("document") + " " + e.doc_id : ""))
         .filter(Boolean);
       if (titles.length === 0) return;
       container.replaceChildren();
@@ -677,15 +786,15 @@
       notice.id = "tokenNotice";
 
       const title = document.createElement("strong");
-      title.textContent = "还没有访问令牌";
+      title.textContent = t("noTokenTitle");
       const code = document.createElement("code");
-      code.textContent = 'localStorage.setItem("suredesk_access_token", "你的令牌")';
+      code.textContent = 'localStorage.setItem("suredesk_access_token", "' + t("tokenPlaceholder") + '")';
 
       notice.appendChild(title);
       notice.appendChild(code);
       messagesEl.appendChild(notice);
       scrollToLatest();
-      showToast("未检测到访问令牌");
+      showToast(t("noTokenToast"));
     }
 
     function createBotStream() {
@@ -693,7 +802,7 @@
 
       const typing = document.createElement("div");
       typing.className = "typing";
-      typing.setAttribute("aria-label", "正在回复");
+      typing.setAttribute("aria-label", t("replying"));
       for (let i = 0; i < 3; i += 1) typing.appendChild(document.createElement("span"));
       bubble.appendChild(typing);
 
@@ -715,12 +824,12 @@
       const up = document.createElement("button");
       up.type = "button";
       up.className = "feedback-btn";
-      up.textContent = "有帮助";
+      up.textContent = t("helpful");
 
       const down = document.createElement("button");
       down.type = "button";
       down.className = "feedback-btn";
-      down.textContent = "没解决";
+      down.textContent = t("notHelpful");
 
       up.addEventListener("click", () => sendFeedback(true, query, stream.answer.textContent, bar));
       down.addEventListener("click", () => sendFeedback(false, query, stream.answer.textContent, bar));
@@ -775,7 +884,7 @@
         if (contentType.includes("application/json")) {
           const data = await resp.json();
           if (stream.typing.parentNode) stream.typing.remove();
-          accumulatedAnswer = data.answer || "已收到。";
+          accumulatedAnswer = data.answer || t("fallback");
           stream.answer.textContent = accumulatedAnswer;
           if (data.evidence) renderEvidence(stream.evidence, data.evidence);
         } else if (resp.body && resp.body.getReader) {
@@ -804,20 +913,20 @@
         }
 
         if (!accumulatedAnswer && !stream.answer.textContent) {
-          accumulatedAnswer = "已收到。";
+          accumulatedAnswer = t("fallback");
           stream.answer.textContent = accumulatedAnswer;
         }
 
         addFeedback(stream, text);
       } catch (err) {
         if (stream.typing.parentNode) stream.typing.remove();
-        stream.answer.textContent = "刚才没连上，再试一次。";
+        stream.answer.textContent = t("connectError");
         stream.answer.classList.add("error");
 
         const retry = document.createElement("button");
         retry.type = "button";
         retry.className = "retry";
-        retry.textContent = "重试";
+        retry.textContent = t("retry");
         retry.addEventListener("click", () => {
           inputEl.value = text;
           resizeInput();
@@ -827,7 +936,7 @@
       } finally {
         isSending = false;
         sendBtn.disabled = false;
-        sendBtn.textContent = "发送";
+        sendBtn.textContent = t("send");
         scrollToLatest();
       }
     }
@@ -856,12 +965,12 @@
           barElement.replaceChildren();
           const stamp = document.createElement("span");
           stamp.className = "stamp";
-          stamp.textContent = useful ? "已记录" : "已转运营";
+          stamp.textContent = useful ? t("saved") : t("sentToOps");
           barElement.appendChild(stamp);
         }
-        showToast(useful ? "谢谢" : "已收到");
+        showToast(useful ? t("thanks") : t("gotIt"));
       } catch (err) {
-        showToast("提交失败，再试一次");
+        showToast(t("submitFailed"));
       }
     }
 

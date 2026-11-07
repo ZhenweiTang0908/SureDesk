@@ -17,7 +17,7 @@ CHROMIUM = Path.home() / (
     "Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
 )
 
-PROBLEMS = [
+PROBLEMS_ZH = [
     {
         "id": "pp_7f3a91c2d4e5",
         "session_id": "sess_8ab21c",
@@ -72,16 +72,83 @@ PROBLEMS = [
     },
 ]
 
-CHAT_ANSWER = (
+PROBLEMS_EN = [
+    {
+        "id": "pp_7f3a91c2d4e5",
+        "session_id": "sess_8ab21c",
+        "trigger_type": "CONFIDENCE_GATE",
+        "query": "Can a custom keyboard be returned within 7 days after opening?",
+        "rewritten_query": "Does the 7-day return policy apply to opened custom mechanical keyboards?",
+        "frequency": 4,
+        "sessions": ["sess_8ab21c", "sess_2f91da", "sess_71ce02"],
+        "answer": "No return exception was found for this product category, so the commitment answer was stopped.",
+        "operator_status": "PENDING",
+        "standard_answer": "",
+        "created_at": "2026-11-07T10:24:00+01:00",
+    },
+    {
+        "id": "pp_2b8d64a0c913",
+        "session_id": "sess_31bd77",
+        "trigger_type": "USER_THUMBS_DOWN",
+        "query": "Who pays the return shipping?",
+        "rewritten_query": "For a 7-day goodwill return, does the buyer or the seller pay return shipping?",
+        "frequency": 3,
+        "sessions": ["sess_31bd77", "sess_9ac410"],
+        "answer": "Return shipping depends on whether the item shipped free, why it is being returned, and the platform rules.",
+        "operator_status": "PENDING",
+        "standard_answer": "",
+        "created_at": "2026-11-07T09:52:00+01:00",
+    },
+    {
+        "id": "pp_91c47e02ab55",
+        "session_id": "sess_550ae1",
+        "trigger_type": "CONFIDENCE_GATE",
+        "query": "Can the invoice use my company name?",
+        "rewritten_query": "Can the order be invoiced to a company as a standard VAT invoice?",
+        "frequency": 2,
+        "sessions": ["sess_550ae1", "sess_0c7d93"],
+        "answer": "",
+        "operator_status": "PENDING",
+        "standard_answer": "",
+        "created_at": "2026-11-07T09:18:00+01:00",
+    },
+    {
+        "id": "pp_5e0a38c7d124",
+        "session_id": "sess_71ce02",
+        "trigger_type": "USER_THUMBS_DOWN",
+        "query": "When will pre-order items ship?",
+        "rewritten_query": "What is the promised shipping date and delay compensation for pre-order items?",
+        "frequency": 6,
+        "sessions": ["sess_71ce02", "sess_8ab21c", "sess_31bd77", "sess_9ac410"],
+        "answer": "Pre-order items usually ship within the window shown on the product page. Check the order details for the latest date.",
+        "operator_status": "PENDING",
+        "standard_answer": "",
+        "created_at": "2026-11-06T18:40:00+01:00",
+    },
+]
+
+CHAT_ANSWER_ZH = (
     "订单 order_1002 已经发货了。顺丰速运的运单号是 SF100288889999，"
     "最新轨迹显示快件正在发往北京顺义集散中心。\n\n"
     "预计明天下午前完成派送。如果超过 24 小时没有更新，可以回复「转人工」，"
     "我们会帮你联系承运方。"
 )
 
-FOLLOW_UP_ANSWER = (
+CHAT_ANSWER_EN = (
+    "Order order_1002 has shipped. The SF Express tracking number is SF100288889999, "
+    "and the latest scan shows the parcel moving toward the Beijing Shunyi hub.\n\n"
+    "Delivery is expected tomorrow afternoon. If there is no update for 24 hours, "
+    'reply "human" and we will contact the carrier.'
+)
+
+FOLLOW_UP_ANSWER_ZH = (
     "预计明天 14:00 前送到北京朝阳区。派件前快递员会电话联系；"
     "如果家里没人，也可以在应用里改约到周末。"
+)
+
+FOLLOW_UP_ANSWER_EN = (
+    "Expected before 14:00 tomorrow in Chaoyang, Beijing. The courier will call before delivery. "
+    "If nobody is home, you can reschedule for the weekend in the app."
 )
 
 
@@ -92,8 +159,8 @@ def sse(event: str, payload: dict | str) -> str:
 
 
 def chat_stream_body(
-    answer: str = CHAT_ANSWER,
-    thought: str = "识别为物流查询，正在核验订单归属并读取承运方最新轨迹。",
+    answer: str = CHAT_ANSWER_EN,
+    thought: str = "Classified as a logistics query. Checking order ownership and the latest carrier scan.",
     evidence: list[dict] | None = None,
 ) -> str:
     """Build a deterministic streamed answer for screenshots."""
@@ -106,8 +173,8 @@ def chat_stream_body(
             "evidence",
             evidence
             or [
-                {"doc_title": "订单 order_1002 · 履约状态"},
-                {"doc_title": "电商售后 FAQ · 物流时效"},
+                {"doc_title": "Order order_1002 · fulfilment"},
+                {"doc_title": "E-commerce FAQ · delivery times"},
             ],
         )
     )
@@ -131,6 +198,13 @@ def install_token(context, token: str) -> None:
     )
 
 
+def install_language(context, lang: str) -> None:
+    """Pin the UI language before the page script runs."""
+    context.add_init_script(
+        "localStorage.setItem('suredesk_lang', " + json.dumps(lang) + ");"
+    )
+
+
 def wait_for_page(page: Page) -> None:
     """Wait for layout, fonts, and the entry animation to settle."""
     page.wait_for_load_state("networkidle")
@@ -138,21 +212,42 @@ def wait_for_page(page: Page) -> None:
     page.wait_for_timeout(650)
 
 
-def capture_chat(page: Page, output: Path, mobile: bool = False) -> None:
+def capture_chat(page: Page, output: Path, lang: str, mobile: bool = False) -> None:
     """Capture the welcome state and a completed conversation."""
+    request_count = {"value": 0}
+
     def fulfill_chat(route):
-        post_data = route.request.post_data or ""
-        if "明天" in post_data:
+        request_count["value"] += 1
+        if request_count["value"] > 1:
             body = chat_stream_body(
-                FOLLOW_UP_ANSWER,
-                "沿用上一轮的订单上下文，读取同城派送时段。",
+                FOLLOW_UP_ANSWER_ZH if lang == "zh" else FOLLOW_UP_ANSWER_EN,
+                "沿用上一轮的订单上下文，读取同城派送时段。"
+                if lang == "zh"
+                else "Reusing the order context from the previous turn to read the local delivery window.",
                 [
-                    {"doc_title": "顺丰速运 · 派送时效说明"},
-                    {"doc_title": "订单 order_1002 · 收货地址"},
+                    {"doc_title": "顺丰速运 · 派送时效说明"}
+                    if lang == "zh"
+                    else {"doc_title": "SF Express · delivery window"},
+                    {"doc_title": "订单 order_1002 · 收货地址"}
+                    if lang == "zh"
+                    else {"doc_title": "Order order_1002 · delivery address"},
                 ],
             )
         else:
-            body = chat_stream_body()
+            body = chat_stream_body(
+                CHAT_ANSWER_ZH if lang == "zh" else CHAT_ANSWER_EN,
+                "识别为物流查询，正在核验订单归属并读取承运方最新轨迹。"
+                if lang == "zh"
+                else "Classified as a logistics query. Checking order ownership and the latest carrier scan.",
+                [
+                    {"doc_title": "订单 order_1002 · 履约状态"}
+                    if lang == "zh"
+                    else {"doc_title": "Order order_1002 · fulfilment"},
+                    {"doc_title": "电商售后 FAQ · 物流时效"}
+                    if lang == "zh"
+                    else {"doc_title": "E-commerce FAQ · delivery times"},
+                ],
+            )
         route.fulfill(status=200, content_type="text/event-stream", body=body)
 
     page.route(
@@ -171,7 +266,7 @@ def capture_chat(page: Page, output: Path, mobile: bool = False) -> None:
     if not mobile:
         page.screenshot(path=str(output / "chat-conversation.png"), full_page=False)
 
-    page.fill("#userInput", "那明天大概几点能送到？")
+    page.fill("#userInput", "那明天大概几点能送到？" if lang == "zh" else "What time tomorrow?")
     page.press("#userInput", "Enter")
     page.wait_for_function(
         "document.querySelectorAll('.feedback-bar').length >= 2",
@@ -189,15 +284,16 @@ def capture_chat(page: Page, output: Path, mobile: bool = False) -> None:
     )
 
 
-def capture_workbench(page: Page, output: Path) -> None:
+def capture_workbench(page: Page, output: Path, lang: str) -> None:
     """Capture the review queue with a selected problem."""
+    problems = PROBLEMS_ZH if lang == "zh" else PROBLEMS_EN
 
     def fulfill(route):
         route.fulfill(
             status=200,
             content_type="application/json",
             body=json.dumps(
-                {"success": True, "total": len(PROBLEMS), "problems": PROBLEMS},
+                {"success": True, "total": len(problems), "problems": problems},
                 ensure_ascii=False,
             ),
         )
@@ -231,41 +327,49 @@ def main() -> int:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(executable_path=str(CHROMIUM), headless=True)
 
-        desktop = browser.new_context(
-            viewport={"width": 1440, "height": 900},
-            device_scale_factor=2,
-            locale="zh-CN",
-        )
-        install_token(desktop, buyer_token)
-        page = desktop.new_page()
-        page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
-        capture_chat(page, args.output)
-        desktop.close()
+        for lang in ("en", "zh"):
+            lang_dir = args.output / lang
+            lang_dir.mkdir(parents=True, exist_ok=True)
+            locale = "en-US" if lang == "en" else "zh-CN"
 
-        workbench = browser.new_context(
-            viewport={"width": 1440, "height": 1000},
-            device_scale_factor=2,
-            locale="zh-CN",
-        )
-        install_token(workbench, operator_token)
-        workbench_page = workbench.new_page()
-        workbench_page.on(
-            "console",
-            lambda message: errors.append(message.text) if message.type == "error" else None,
-        )
-        capture_workbench(workbench_page, args.output)
-        workbench.close()
+            desktop = browser.new_context(
+                viewport={"width": 1440, "height": 900},
+                device_scale_factor=2,
+                locale=locale,
+            )
+            install_token(desktop, buyer_token)
+            install_language(desktop, lang)
+            page = desktop.new_page()
+            page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
+            capture_chat(page, lang_dir, lang)
+            desktop.close()
 
-        mobile = browser.new_context(
-            viewport={"width": 390, "height": 844},
-            device_scale_factor=2,
-            locale="zh-CN",
-            is_mobile=True,
-        )
-        install_token(mobile, buyer_token)
-        mobile_page = mobile.new_page()
-        capture_chat(mobile_page, args.output, mobile=True)
-        mobile.close()
+            workbench = browser.new_context(
+                viewport={"width": 1440, "height": 1000},
+                device_scale_factor=2,
+                locale=locale,
+            )
+            install_token(workbench, operator_token)
+            install_language(workbench, lang)
+            workbench_page = workbench.new_page()
+            workbench_page.on(
+                "console",
+                lambda message: errors.append(message.text) if message.type == "error" else None,
+            )
+            capture_workbench(workbench_page, lang_dir, lang)
+            workbench.close()
+
+            mobile = browser.new_context(
+                viewport={"width": 390, "height": 844},
+                device_scale_factor=2,
+                locale=locale,
+                is_mobile=True,
+            )
+            install_token(mobile, buyer_token)
+            install_language(mobile, lang)
+            mobile_page = mobile.new_page()
+            capture_chat(mobile_page, lang_dir, lang, mobile=True)
+            mobile.close()
 
         browser.close()
 

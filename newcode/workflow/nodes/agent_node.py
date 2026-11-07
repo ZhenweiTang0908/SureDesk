@@ -3,8 +3,11 @@ Main ReAct Agent Node integrating Knowledge Retrieval, Tool Calling, and Direct 
 """
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 
+from newcode.core.llm import LLMClient
 from newcode.guard.confidence_gate import ConfidenceGate
 from newcode.models.domain import TriggerType
 from newcode.rag.engine import HybridRetrievalEngine
@@ -14,6 +17,78 @@ from newcode.tools.base import SecurityContext
 from newcode.tools.registry import ToolRegistry
 from newcode.workflow.state import CustomerServiceState
 
+logger = logging.getLogger(__name__)
+LLM_TIMEOUT_SECONDS = 20.0
+
+
+def _is_chinese(text: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]", text))
+
+
+async def _call_llm(llm_client: LLMClient, messages: list[dict[str, str]], max_tokens: int = 600) -> str:
+    """Call the optional LLM with a bounded timeout and a safe empty fallback."""
+    try:
+        answer = await asyncio.wait_for(
+            llm_client.generate_text(messages, temperature=0.2, max_tokens=max_tokens),
+            timeout=LLM_TIMEOUT_SECONDS,
+        )
+        return (answer or "").strip()
+    except Exception:
+        logger.exception("LLM answer generation failed; falling back to deterministic answer")
+        return ""
+
+
+def _chat_messages(query: str) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are SureDesk, an e-commerce customer service assistant. "
+                "Reply briefly and warmly in the customer's language. "
+                "Offer help with orders, delivery, returns and policies. "
+                "Do not invent order details or policy promises."
+            ),
+        },
+        {"role": "user", "content": query},
+    ]
+
+
+def _grounded_messages(query: str, results: list) -> list[dict[str, str]]:
+    evidence = "\n\n".join(
+        f"[{index}] {result.chunk.title_path}\n{result.chunk.content}"
+        for index, result in enumerate(results, start=1)
+    )
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are SureDesk, an e-commerce customer service assistant. "
+                "Answer in the customer's language using ONLY the supplied evidence. "
+                "Be concise and actionable. Do not invent policies, prices, dates, "
+                "order statuses or commitments. If the evidence does not answer the "
+                "question, say you cannot confirm it and suggest human support."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"Customer question: {query}\n\nEvidence:\n{evidence}",
+        },
+    ]
+
+
+def _tool_messages(query: str, tool_result: str) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "Rewrite the verified tool result as a concise customer-facing answer "
+                "in the customer's language. Do not change order IDs, numbers, statuses "
+                "or dates. Do not add facts that are not in the tool result."
+            ),
+        },
+        {"role": "user", "content": f"Customer question: {query}\n\nVerified tool result:\n{tool_result}"},
+    ]
+
 
 async def execute_agent_node(
     state: CustomerServiceState,
@@ -21,6 +96,7 @@ async def execute_agent_node(
     tool_registry: ToolRegistry | None = None,
     problem_pool_service: ProblemPoolService | None = None,
     confidence_gate: ConfidenceGate | None = None,
+    llm_client: LLMClient | None = None,
 ) -> CustomerServiceState:
     """
     Executes Main Agent flow:
@@ -38,6 +114,12 @@ async def execute_agent_node(
             state.thoughts.append("安全防御：触发敏感违规前置拦截。")
             return state
         else:
+            if llm_client:
+                generated = await _call_llm(llm_client, _chat_messages(query))
+                if generated:
+                    state.final_answer = generated
+                    state.thoughts.append("LLM 生成回复")
+                    return state
             state.final_answer = "您好！我是 SureDesk 智能客服助手，请问有什么可以帮您的？支持查询订单、追踪物流、退换货以及政策咨询。"
             state.thoughts.append("闲聊出口：输出标准亲切问候语。")
             return state
@@ -55,10 +137,10 @@ async def execute_agent_node(
     # 3. Execute authenticated order and logistics tools before knowledge retrieval.
     if tool_registry and state.intent in (IntentType.ORDER_QUERY, IntentType.LOGISTICS_PROGRESS):
         context = SecurityContext(user_id=state.user_id, session_id=state.session_id)
-        order_match = re.search(r"ord_[a-zA-Z0-9_]+", query)
+        order_match = re.search(r"ord(?:er)?_[a-zA-Z0-9_]+", query)
         if state.intent == IntentType.LOGISTICS_PROGRESS and not order_match:
             state.is_suspended = True
-            state.final_answer = "请提供需要查询物流的订单号，例如 ord_1001。"
+            state.final_answer = "请提供需要查询物流的订单号，例如 order_1001。"
             return state
 
         tool_name = "query_logistics" if state.intent == IntentType.LOGISTICS_PROGRESS else (
@@ -68,7 +150,11 @@ async def execute_agent_node(
         result = await tool_registry.execute(tool_name, params, context)
         state.tool_calls.append({"name": tool_name, "params": params, "result": result})
         if result.get("success"):
-            state.final_answer = _format_tool_result(tool_name, result)
+            deterministic_answer = _format_tool_result(tool_name, result)
+            generated = ""
+            if llm_client:
+                generated = await _call_llm(llm_client, _tool_messages(query, deterministic_answer))
+            state.final_answer = generated or deterministic_answer
         else:
             state.final_answer = str(result.get("error", "业务查询暂时失败，请稍后重试。"))
         return state
@@ -103,9 +189,24 @@ async def execute_agent_node(
             return state
 
         best_chunk = results[0].chunk
-        state.final_answer = f"{best_chunk.content}\n\n【依据政策来源】：《{best_chunk.title_path}》"
+        citation = (
+            f"\n\n【依据政策来源】：《{best_chunk.title_path}》"
+            if _is_chinese(query)
+            else f'\n\nSources: "{best_chunk.title_path}"'
+        )
+        deterministic_answer = f"{best_chunk.content}{citation}"
+
+        generated = ""
+        if llm_client:
+            generated = await _call_llm(
+                llm_client,
+                _grounded_messages(query, results),
+                max_tokens=700,
+            )
+        state.final_answer = f"{generated}{citation}" if generated else deterministic_answer
         state.thoughts.append(
-            f"检索成功命中证据（相关度 {results[0].score:.2f}），附带政策引用生成回答。"
+            f"检索成功命中证据（相关度 {results[0].score:.2f}），"
+            + ("LLM 已基于证据生成回答。" if generated else "使用抽取式证据回答。")
         )
         return state
 
